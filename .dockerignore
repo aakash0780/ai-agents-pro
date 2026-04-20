@@ -1,0 +1,36 @@
+# Dependencies
+node_modules
+.pnpm-store
+
+# Env (injected at runtime in Docker/CI)
+.env
+.env.local
+.env.*.local
+
+# Build output (rebuilt inside container)
+dist
+build
+
+# Git and IDE
+.git
+.gitignore
+.github
+.cursor
+.vscode
+*.md
+!README.md
+
+# Tests and coverage
+coverage
+*.test.js
+*.spec.js
+__tests__
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# Optional
+*.md
+Dockerfile*
+docker-compose*
+.dockerignore

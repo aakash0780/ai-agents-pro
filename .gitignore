@@ -1,0 +1,27 @@
+# Dependencies
+node_modules/
+
+# Environment variables
+.env
+.env.keys
+
+# Build output
+dist/
+
+# Prisma generated
+/src/generated/prisma
+
+# Agentic Architecture
+.tmp/
+credentials.json
+token.json
+
+# IDE
+.vscode/
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS
+.DS_Store
