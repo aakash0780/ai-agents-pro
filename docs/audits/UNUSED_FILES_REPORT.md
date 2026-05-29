@@ -1,5 +1,7 @@
 # 🗑️ UNUSED FILES REPORT
 
+> Current status note (April 30, 2026): this is a historical cleanup snapshot. For the current file-system hierarchy, use `PROJECT_STRUCTURE.md` in the project root.
+
 **Date:** January 2025  
 **Action:** Removed unused files from the codebase
 
@@ -109,4 +111,3 @@ All shadcn/ui components are kept because:
 ---
 
 **Note:** This cleanup improves codebase maintainability by removing dead code while keeping useful components for future development.
-

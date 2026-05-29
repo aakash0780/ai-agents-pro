@@ -1,301 +1,428 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { useAuth } from '@/contexts/AuthContext';
-import { getApiRootUrl } from '@/lib/api';
-import { GoogleIcon, FacebookIcon, AppleIcon, GitHubIcon } from '@/components/SocialAuthIcons';
-import { UserPlus, Mail, Lock, User, Phone, Building, Loader2, AlertCircle } from 'lucide-react';
+import { motion as Motion, AnimatePresence } from 'framer-motion';
+import { AlertCircle, Check, Eye, EyeOff, KeyRound, Loader2, Lock, Mail, User, Zap } from 'lucide-react';
 import { toast } from 'sonner';
-import { cn } from '@/lib/utils';
+import { useAuth } from '@/hooks/useAuth';
+import { getApiRootUrl } from '@/lib/api';
+import { AppleIcon, FacebookIcon, GitHubIcon, GoogleIcon, LinkedInIcon } from '@/components/SocialAuthIcons';
 
-const SOCIAL_BUTTON_CLASS = 'size-12 rounded-xl border border-border bg-card hover:bg-muted/50 transition-colors flex items-center justify-center shrink-0 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2';
+const quotes = [
+  {
+    text: 'We reduced repetitive support queues within the first month.',
+    author: 'Elena Brooks',
+    company: 'Northstar Commerce',
+  },
+  {
+    text: 'Lead qualification moved from manual triage to instant routing.',
+    author: 'Rahul Menon',
+    company: 'PulsePay',
+  },
+  {
+    text: 'Prospects finally get answers after business hours.',
+    author: 'Danielle Price',
+    company: 'EduPilot',
+  },
+];
+
+const socialProviders = [
+  { id: 'google', label: 'Continue with Google', Icon: GoogleIcon },
+  { id: 'facebook', label: 'Continue with Facebook', Icon: FacebookIcon },
+  { id: 'github', label: 'GitHub', Icon: GitHubIcon },
+  { id: 'apple', label: 'Apple', Icon: AppleIcon },
+  { id: 'linkedin', label: 'LinkedIn', Icon: LinkedInIcon },
+];
+
+function getPasswordStrength(password) {
+  const checks = [
+    password.length >= 8,
+    /[A-Z]/.test(password),
+    /[0-9]/.test(password),
+    /[^A-Za-z0-9]/.test(password),
+  ];
+  const score = checks.filter(Boolean).length;
+  const labels = ['Weak', 'Weak', 'Fair', 'Good', 'Strong'];
+  const colors = ['bg-[#fb565b]', 'bg-[#fb565b]', 'bg-[#ffba00]', 'bg-[#2fd6a1]', 'bg-[#00d992]'];
+  return { score, label: labels[score], color: colors[score] };
+}
+
+function FieldError({ message }) {
+  if (!message) return null;
+  return <p className="text-xs text-[#fb565b]">{message}</p>;
+}
+
+function AuthInput({ id, label, icon, error, className = '', children, ...props }) {
+  const InputIcon = icon;
+
+  return (
+    <label className="block space-y-1.5" htmlFor={id}>
+      <span className="text-[13px] text-[#b8b3b0]">{label}</span>
+      <span className="relative block">
+        <InputIcon className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#8b949e]" />
+        <input
+          id={id}
+          className={`h-12 w-full rounded-md border bg-[#101010] px-10 text-sm text-[#f2f2f2] outline-none transition placeholder:text-[#8b949e] focus:border-[#00d992] focus:ring-1 focus:ring-[#00d992]/30 ${
+            error ? 'border-[#fb565b]' : 'border-[#3d3a39]'
+          } ${className}`}
+          aria-invalid={Boolean(error)}
+          {...props}
+        />
+        {children}
+      </span>
+      <FieldError message={error} />
+    </label>
+  );
+}
+
+function SocialButton({ provider, onClick }) {
+  const { Icon } = provider;
+  return (
+    <Motion.button
+      type="button"
+      onClick={() => onClick(provider.id)}
+      whileHover={{ scale: 1.02 }}
+      whileTap={{ scale: 0.98 }}
+      className="flex min-h-12 w-full items-center justify-center gap-3 rounded-md border border-[#3d3a39] bg-[#101010] px-4 py-3 text-sm font-medium text-[#f2f2f2] transition-colors hover:border-[#00d992]"
+    >
+      <Icon className={`h-5 w-5 ${provider.id === 'facebook' ? 'text-[#1877F2]' : provider.id === 'linkedin' ? 'text-[#0A66C2]' : ''}`} />
+      <span>{provider.label}</span>
+    </Motion.button>
+  );
+}
 
 export function SignupPage() {
   const navigate = useNavigate();
   const { signup } = useAuth();
+  const [quoteIndex, setQuoteIndex] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState({});
   const [formData, setFormData] = useState({
     name: '',
     email: '',
     password: '',
     confirmPassword: '',
-    phone: '',
-    company: '',
   });
-  const [errors, setErrors] = useState({});
 
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-    if (errors[name]) {
-      setErrors(prev => ({ ...prev, [name]: null }));
-    }
+  const activeQuote = quotes[quoteIndex];
+  const apiRoot = useMemo(() => getApiRootUrl(), []);
+  const passwordStrength = getPasswordStrength(formData.password);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setQuoteIndex((current) => (current + 1) % quotes.length);
+    }, 4000);
+    return () => window.clearInterval(timer);
+  }, []);
+
+  const updateField = (event) => {
+    const { name, value } = event.target;
+    setFormData((current) => ({ ...current, [name]: value }));
+    setFieldErrors((current) => ({ ...current, [name]: '' }));
+    setError('');
   };
 
   const validateForm = () => {
-    const newErrors = {};
-
-    if (!formData.name.trim()) newErrors.name = 'Full name is required';
-    if (!formData.email.trim()) {
-      newErrors.email = 'Email is required';
-    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = 'Please enter a valid email address';
-    }
-
-    if (formData.password.length < 6) {
-      newErrors.password = 'Password must be at least 6 characters';
-    }
-
-    if (formData.password !== formData.confirmPassword) {
-      newErrors.confirmPassword = 'Passwords do not match';
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    const nextErrors = {};
+    if (!formData.name.trim()) nextErrors.name = 'Full name is required.';
+    if (!/\S+@\S+\.\S+/.test(formData.email)) nextErrors.email = 'Enter a valid email address.';
+    if (formData.password.length < 8) nextErrors.password = 'Password must be at least 8 characters.';
+    if (formData.password !== formData.confirmPassword) nextErrors.confirmPassword = 'Passwords do not match.';
+    if (!acceptedTerms) nextErrors.terms = 'You must accept the terms to continue.';
+    setFieldErrors(nextErrors);
+    return Object.keys(nextErrors).length === 0;
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleSocialLogin = (provider) => {
+    window.location.href = `${apiRoot}/auth/${provider}`;
+  };
 
-    if (!validateForm()) {
-      return;
-    }
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    if (!validateForm()) return;
 
     setLoading(true);
+    setError('');
+
     try {
       await signup({
         name: formData.name,
         email: formData.email,
         password: formData.password,
-        phone: formData.phone || undefined,
-        company: formData.company || undefined,
       });
-      navigate('/dashboard', { replace: true });
-    } catch (error) {
-      console.error('Signup error:', error);
+      navigate('/login?registered=true', { replace: true });
+    } catch (err) {
+      const message = err?.message || 'Unable to create account.';
+      setError(message);
+      toast.error(message);
     } finally {
       setLoading(false);
     }
   };
 
-  const supportedSocialProviders = ['google', 'github', 'facebook', 'apple'];
-  const handleSocialLogin = (provider) => {
-    if (supportedSocialProviders.includes(provider)) {
-      window.location.href = `${getApiRootUrl()}/auth/${provider}`;
-    } else {
-      toast.info(`${provider} sign-up is not available.`);
-    }
-  };
-
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-background via-background to-muted/30 px-4 py-12 sm:px-6 lg:px-8">
-      <div className="w-full max-w-[440px]">
-        <Card className="border-border/80 shadow-xl shadow-black/5 dark:shadow-none rounded-2xl overflow-hidden">
-          <CardHeader className="text-center space-y-3 pb-4 pt-8 sm:pt-10">
-            <div className="flex justify-center">
-              <div className="size-16 rounded-2xl bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center shadow-lg shadow-primary/20">
-                <UserPlus className="size-8 text-white" />
-              </div>
-            </div>
-            <CardTitle className="text-2xl sm:text-3xl font-bold tracking-tight">Create an account</CardTitle>
-            <CardDescription className="text-muted-foreground text-sm max-w-[320px] mx-auto">
-              Sign up with Google, GitHub, Facebook, Apple ID, or email — free to try
-            </CardDescription>
-          </CardHeader>
+    <div className="min-h-screen bg-[#050507] text-[#f2f2f2] lg:flex">
+      <aside className="relative hidden min-h-screen w-1/2 overflow-hidden border-r border-[#3d3a39] bg-[#050507] lg:flex">
+        <div className="absolute inset-0 auth-dot-grid opacity-70" />
+        <div className="relative z-10 mx-auto flex w-full max-w-md flex-col justify-center px-10">
+          <Motion.div
+            animate={{ y: [0, -8, 0] }}
+            transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut' }}
+            className="mb-8 flex h-16 w-16 items-center justify-center rounded-2xl border border-[#00d992]/40 bg-[#101010] text-[#00d992] logo-glow"
+          >
+            <Zap className="h-9 w-9" />
+          </Motion.div>
+          <h2 className="text-3xl font-normal text-[#f2f2f2]">AI Agents Pro</h2>
+          <p className="mt-3 text-base leading-7 text-[#b8b3b0]">Start your 14-day free trial with intelligent AI agents.</p>
 
-          <CardContent className="px-6 sm:px-8 pb-8 sm:pb-10 space-y-6">
-            {/* Social buttons */}
-            <div className="grid grid-cols-4 gap-2 sm:gap-3">
-              <Button type="button" variant="ghost" onClick={() => handleSocialLogin('google')} className={SOCIAL_BUTTON_CLASS} aria-label="Sign up with Google">
-                <GoogleIcon className="size-6" />
-              </Button>
-              <Button type="button" variant="ghost" onClick={() => handleSocialLogin('facebook')} className={SOCIAL_BUTTON_CLASS} aria-label="Sign up with Facebook">
-                <FacebookIcon className="size-6 text-[#1877F2]" />
-              </Button>
-              <Button type="button" variant="ghost" onClick={() => handleSocialLogin('apple')} className={SOCIAL_BUTTON_CLASS} aria-label="Sign up with Apple ID">
-                <AppleIcon className="size-6 text-foreground" />
-              </Button>
-              <Button type="button" variant="ghost" onClick={() => handleSocialLogin('github')} className={SOCIAL_BUTTON_CLASS} aria-label="Sign up with GitHub">
-                <GitHubIcon className="size-6" />
-              </Button>
+          <div className="mt-10 space-y-3">
+            {[
+              ['500+', 'businesses automated'],
+              ['10M+', 'conversations handled'],
+              ['99.9%', 'uptime guaranteed'],
+            ].map(([value, label], index) => (
+              <Motion.div
+                key={label}
+                animate={{ y: [0, -5, 0] }}
+                transition={{ duration: 6, repeat: Infinity, delay: index * 0.35, ease: 'easeInOut' }}
+                className="rounded-lg border border-[#3d3a39] bg-[#101010]/80 p-4"
+              >
+                <p className="text-xl font-semibold text-[#00d992]">{value}</p>
+                <p className="text-sm text-[#b8b3b0]">{label}</p>
+              </Motion.div>
+            ))}
+          </div>
+
+          <div className="mt-10 min-h-32 border-t border-[#3d3a39] pt-6">
+            <AnimatePresence mode="wait">
+              <Motion.blockquote
+                key={activeQuote.text}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                transition={{ duration: 0.35 }}
+              >
+                <p className="text-lg leading-7 text-[#f2f2f2]">"{activeQuote.text}"</p>
+                <footer className="mt-4 text-sm text-[#8b949e]">
+                  {activeQuote.author}, {activeQuote.company}
+                </footer>
+              </Motion.blockquote>
+            </AnimatePresence>
+          </div>
+        </div>
+      </aside>
+
+      <main className="flex min-h-screen flex-1 items-center justify-center overflow-y-auto px-4 py-24 sm:px-6 lg:w-1/2">
+        <div className="w-full max-w-[440px]">
+          <Motion.section
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            className="rounded-xl border border-[#3d3a39] bg-[#101010] p-6 shadow-[0_0_30px_rgba(0,0,0,0.35)] sm:p-10"
+          >
+            <div className="mb-8">
+              <Link to="/" className="mb-6 inline-flex items-center gap-2 text-sm font-semibold text-[#f2f2f2] no-underline">
+                <span className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#3d3a39] text-[#00d992]">
+                  <Zap className="h-4 w-4" />
+                </span>
+                AI Agents Pro
+              </Link>
+              <h1 className="text-[28px] font-normal text-[#f2f2f2]">Create your account</h1>
+              <p className="mt-1 text-sm text-[#8b949e]">Start your 14-day free trial. No credit card required.</p>
             </div>
 
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t border-border/60" />
+            <div className="space-y-3">
+              <div className="grid gap-3 sm:grid-cols-2">
+                {socialProviders.slice(0, 2).map((provider) => (
+                  <SocialButton key={provider.id} provider={provider} onClick={handleSocialLogin} />
+                ))}
               </div>
-              <div className="relative flex justify-center text-xs uppercase tracking-wider">
-                <span className="bg-card px-3 text-muted-foreground">Or with email</span>
+              <div className="grid gap-3 sm:grid-cols-2">
+                {socialProviders.slice(2, 4).map((provider) => (
+                  <SocialButton key={provider.id} provider={provider} onClick={handleSocialLogin} />
+                ))}
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <SocialButton provider={socialProviders[4]} onClick={handleSocialLogin} />
+                <Motion.button
+                  type="button"
+                  onClick={() => navigate('/login')}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  className="flex min-h-12 w-full items-center justify-center gap-3 rounded-md border border-[#3d3a39] bg-[#101010] px-4 py-3 text-sm font-medium text-[#f2f2f2] transition-colors hover:border-[#00d992]"
+                >
+                  <KeyRound className="h-5 w-5 text-[#00d992]" />
+                  <span>Magic Link</span>
+                </Motion.button>
               </div>
             </div>
+
+            <div className="my-6 flex items-center gap-3">
+              <span className="h-px flex-1 bg-[#3d3a39]" />
+              <span className="text-xs uppercase tracking-[0.18em] text-[#8b949e]">Or continue with email</span>
+              <span className="h-px flex-1 bg-[#3d3a39]" />
+            </div>
+
+            {error ? (
+              <Motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="mb-4 flex gap-2 rounded-md border border-[#fb565b] bg-[#fb565b]/10 p-3 text-sm text-[#f2f2f2]"
+              >
+                <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-[#fb565b]" />
+                <span>{error}</span>
+              </Motion.div>
+            ) : null}
 
             <form onSubmit={handleSubmit} className="space-y-4" noValidate>
-              <div className="space-y-2">
-                <Label htmlFor="name">Full name *</Label>
-                <div className="relative">
-                  <User className="absolute left-3 top-1/2 -translate-y-1/2 size-5 text-muted-foreground pointer-events-none" />
-                  <Input
-                    id="name"
-                    name="name"
-                    type="text"
-                    value={formData.name}
-                    onChange={handleInputChange}
-                    placeholder="John Doe"
-                    className={cn("pl-10 h-11 rounded-xl border-border/80 transition-all focus:ring-2", errors.name && "border-destructive focus-visible:ring-destructive/30")}
-                    required
-                    aria-invalid={!!errors.name}
-                    aria-describedby={errors.name ? "name-error" : undefined}
-                  />
-                </div>
-                {errors.name && (
-                  <p id="name-error" className="text-sm text-destructive flex items-center gap-1 animate-in slide-in-from-left-1">
-                    <AlertCircle className="size-3 shrink-0" /> {errors.name}
-                  </p>
-                )}
-              </div>
+              <AuthInput
+                id="name"
+                label="Full Name"
+                icon={User}
+                name="name"
+                type="text"
+                value={formData.name}
+                onChange={updateField}
+                placeholder="Aakash Mali"
+                error={fieldErrors.name}
+              />
+              <AuthInput
+                id="email"
+                label="Email address"
+                icon={Mail}
+                name="email"
+                type="email"
+                value={formData.email}
+                onChange={updateField}
+                placeholder="you@example.com"
+                error={fieldErrors.email}
+              />
 
-              <div className="space-y-2">
-                <Label htmlFor="email">Email address *</Label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 size-5 text-muted-foreground pointer-events-none" />
-                  <Input
-                    id="email"
-                    name="email"
-                    type="email"
-                    value={formData.email}
-                    onChange={handleInputChange}
-                    placeholder="your@email.com"
-                    className={cn("pl-10 h-11 rounded-xl border-border/80 transition-all focus:ring-2", errors.email && "border-destructive focus-visible:ring-destructive/30")}
-                    required
-                    aria-invalid={!!errors.email}
-                    aria-describedby={errors.email ? "email-error" : undefined}
-                  />
-                </div>
-                {errors.email && (
-                  <p id="email-error" className="text-sm text-destructive flex items-center gap-1 animate-in slide-in-from-left-1">
-                    <AlertCircle className="size-3 shrink-0" /> {errors.email}
-                  </p>
-                )}
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-2">
-                  <Label htmlFor="phone">Phone (optional)</Label>
-                  <div className="relative">
-                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 size-5 text-muted-foreground pointer-events-none" />
-                    <Input
-                      id="phone"
-                      name="phone"
-                      type="tel"
-                      value={formData.phone}
-                      onChange={handleInputChange}
-                      placeholder="+91..."
-                      className="pl-10 h-11 rounded-xl border-border/80"
-                    />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="company">Company (optional)</Label>
-                  <div className="relative">
-                    <Building className="absolute left-3 top-1/2 -translate-y-1/2 size-5 text-muted-foreground pointer-events-none" />
-                    <Input
-                      id="company"
-                      name="company"
-                      type="text"
-                      value={formData.company}
-                      onChange={handleInputChange}
-                      placeholder="Acme Inc."
-                      className="pl-10 h-11 rounded-xl border-border/80"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="password">Password *</Label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 size-5 text-muted-foreground pointer-events-none" />
-                  <Input
+              <div className="space-y-1.5">
+                <label htmlFor="password" className="text-[13px] text-[#b8b3b0]">Password</label>
+                <span className="relative block">
+                  <Lock className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#8b949e]" />
+                  <input
                     id="password"
                     name="password"
-                    type="password"
+                    type={showPassword ? 'text' : 'password'}
                     value={formData.password}
-                    onChange={handleInputChange}
-                    placeholder="At least 6 characters"
-                    className={cn("pl-10 h-11 rounded-xl border-border/80 transition-all focus:ring-2", errors.password && "border-destructive focus-visible:ring-destructive/30")}
-                    required
-                    minLength={6}
-                    aria-invalid={!!errors.password}
-                    aria-describedby={errors.password ? "password-error" : undefined}
+                    onChange={updateField}
+                    placeholder="At least 8 characters"
+                    className={`h-12 w-full rounded-md border bg-[#101010] px-10 pr-12 text-sm text-[#f2f2f2] outline-none transition placeholder:text-[#8b949e] focus:border-[#00d992] focus:ring-1 focus:ring-[#00d992]/30 ${
+                      fieldErrors.password ? 'border-[#fb565b]' : 'border-[#3d3a39]'
+                    }`}
                   />
-                </div>
-                {errors.password && (
-                  <p id="password-error" className="text-sm text-destructive flex items-center gap-1 animate-in slide-in-from-left-1">
-                    <AlertCircle className="size-3 shrink-0" /> {errors.password}
-                  </p>
-                )}
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((current) => !current)}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-[#8b949e] transition-colors hover:text-[#f2f2f2]"
+                    aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </span>
+                {formData.password ? (
+                  <div className="space-y-1.5">
+                    <div className="grid grid-cols-4 gap-1">
+                      {[1, 2, 3, 4].map((segment) => (
+                        <span
+                          key={segment}
+                          className={`h-1.5 rounded-full ${passwordStrength.score >= segment ? passwordStrength.color : 'bg-[#3d3a39]'}`}
+                        />
+                      ))}
+                    </div>
+                    <p className="text-xs text-[#8b949e]">Strength: {passwordStrength.label}</p>
+                  </div>
+                ) : null}
+                <FieldError message={fieldErrors.password} />
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="confirmPassword">Confirm password *</Label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 size-5 text-muted-foreground pointer-events-none" />
-                  <Input
+              <div className="space-y-1.5">
+                <label htmlFor="confirmPassword" className="text-[13px] text-[#b8b3b0]">Confirm Password</label>
+                <span className="relative block">
+                  <Lock className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#8b949e]" />
+                  <input
                     id="confirmPassword"
                     name="confirmPassword"
-                    type="password"
+                    type={showConfirmPassword ? 'text' : 'password'}
                     value={formData.confirmPassword}
-                    onChange={handleInputChange}
-                    placeholder="Confirm your password"
-                    className={cn("pl-10 h-11 rounded-xl border-border/80 transition-all focus:ring-2", errors.confirmPassword && "border-destructive focus-visible:ring-destructive/30")}
-                    required
-                    minLength={6}
-                    aria-invalid={!!errors.confirmPassword}
-                    aria-describedby={errors.confirmPassword ? "confirm-error" : undefined}
+                    onChange={updateField}
+                    placeholder="Confirm password"
+                    className={`h-12 w-full rounded-md border bg-[#101010] px-10 pr-12 text-sm text-[#f2f2f2] outline-none transition placeholder:text-[#8b949e] focus:border-[#00d992] focus:ring-1 focus:ring-[#00d992]/30 ${
+                      fieldErrors.confirmPassword ? 'border-[#fb565b]' : 'border-[#3d3a39]'
+                    }`}
                   />
-                </div>
-                {errors.confirmPassword && (
-                  <p id="confirm-error" className="text-sm text-destructive flex items-center gap-1 animate-in slide-in-from-left-1">
-                    <AlertCircle className="size-3 shrink-0" /> {errors.confirmPassword}
-                  </p>
-                )}
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword((current) => !current)}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-[#8b949e] transition-colors hover:text-[#f2f2f2]"
+                    aria-label={showConfirmPassword ? 'Hide confirm password' : 'Show confirm password'}
+                  >
+                    {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </span>
+                <FieldError message={fieldErrors.confirmPassword} />
               </div>
 
-              <Button
-                type="submit"
-                size="lg"
-                className={cn(
-                  'w-full h-12 rounded-xl font-semibold text-base',
-                  loading ? 'opacity-70 pointer-events-none' : 'bg-foreground text-background hover:bg-foreground/90'
-                )}
-                disabled={loading}
-              >
-                {loading ? (
-                  <>
-                    <Loader2 className="mr-2 size-5 animate-spin" />
-                    Creating account…
-                  </>
-                ) : (
-                  'Get started'
-                )}
-              </Button>
+              <div className="space-y-1">
+                <label className="flex items-start gap-3 text-sm text-[#b8b3b0]">
+                  <span className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded border ${acceptedTerms ? 'border-[#00d992] bg-[#00d992] text-[#050507]' : 'border-[#3d3a39] bg-[#101010]'}`}>
+                    {acceptedTerms ? <Check className="h-3.5 w-3.5" /> : null}
+                  </span>
+                  <input
+                    type="checkbox"
+                    checked={acceptedTerms}
+                    onChange={(event) => {
+                      setAcceptedTerms(event.target.checked);
+                      setFieldErrors((current) => ({ ...current, terms: '' }));
+                    }}
+                    className="sr-only"
+                  />
+                  <span>I agree to the Terms of Service and Privacy Policy.</span>
+                </label>
+                <FieldError message={fieldErrors.terms} />
+              </div>
 
-              <p className="text-center text-sm text-muted-foreground">
+              <Motion.button
+                type="submit"
+                disabled={loading}
+                whileHover={{ scale: loading ? 1 : 1.01 }}
+                whileTap={{ scale: loading ? 1 : 0.99 }}
+                className="flex h-12 w-full items-center justify-center rounded-md bg-[#00d992] text-sm font-bold text-[#050507] transition hover:bg-[#2fd6a1] disabled:cursor-not-allowed disabled:opacity-70"
+              >
+                {loading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Creating account...</> : 'Create Account'}
+              </Motion.button>
+            </form>
+
+            <div className="mt-6 space-y-3 text-center">
+              <p className="text-sm text-[#8b949e]">
                 Already have an account?{' '}
-                <Link to="/login" className="font-medium text-foreground hover:underline">
-                  Log in
+                <Link to="/login" className="font-medium text-[#00d992] no-underline hover:underline">
+                  Sign in
                 </Link>
               </p>
-            </form>
-          </CardContent>
-        </Card>
-      </div>
+              <p className="text-[11px] leading-5 text-[#8b949e]">
+                By creating an account, you agree to our Terms and Privacy Policy.
+              </p>
+            </div>
+          </Motion.section>
+
+          <div className="mt-6 flex items-center justify-center text-sm text-[#8b949e]">
+            <div className="mr-3 flex -space-x-2">
+              {['NS', 'PP', 'VO', 'MF', 'EP'].map((item) => (
+                <span key={item} className="flex h-8 w-8 items-center justify-center rounded-full border border-[#050507] bg-[#101010] text-[10px] text-[#00d992]">
+                  {item}
+                </span>
+              ))}
+            </div>
+            Join 500+ businesses
+          </div>
+        </div>
+      </main>
     </div>
   );
 }

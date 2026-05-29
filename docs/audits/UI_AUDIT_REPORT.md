@@ -1,6 +1,8 @@
 # 🎯 UI/UX AUDIT REPORT
 ## AI Agents Pro Website - Comprehensive Frontend Analysis
 
+> Current status note (April 30, 2026): this is a historical audit snapshot. For the current frontend hierarchy, route map, and design/navigation state, use `PROJECT_STRUCTURE.md` and `README.md` in the project root.
+
 **Date:** January 2025  
 **Auditor:** Senior Frontend Engineer & UI/UX Specialist  
 **Scope:** Complete page-by-page audit with production-ready recommendations
@@ -746,4 +748,3 @@ const handleSubmit = async (e) => {
 
 **Report Generated:** January 2025  
 **Next Review:** After P0 fixes are implemented
-

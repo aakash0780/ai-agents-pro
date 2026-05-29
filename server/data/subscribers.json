@@ -1,0 +1,17 @@
+[
+  {
+    "email": "newsletter-test@example.com",
+    "source": "api_test",
+    "subscribedAt": "2026-04-30T06:34:10.281Z"
+  },
+  {
+    "email": "newsletter-test-2@example.com",
+    "source": "api_test",
+    "subscribedAt": "2026-04-30T06:36:58.566Z"
+  },
+  {
+    "email": "qa-newsletter-3@example.com",
+    "source": "final_qa",
+    "subscribedAt": "2026-04-30T06:48:21.441Z"
+  }
+]

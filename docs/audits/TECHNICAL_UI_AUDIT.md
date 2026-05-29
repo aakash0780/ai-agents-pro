@@ -1,6 +1,8 @@
 # 🔧 TECHNICAL UI/UX AUDIT REPORT
 ## React + Tailwind CSS Production Audit
 
+> Current status note (April 30, 2026): this is a historical audit snapshot. For the current frontend hierarchy, route map, and API proxy setup, use `PROJECT_STRUCTURE.md`, `README.md`, and `DOCKER_AND_CI.md` in the project root.
+
 **Stack:** React 19 + Vite + Tailwind CSS 4 + shadcn/ui (Radix)  
 **Date:** January 2025  
 **Auditor:** Senior React Frontend Engineer
@@ -1187,4 +1189,3 @@ export function ButtonLink({
 
 **Report Generated:** January 2025  
 **Next Steps:** Implement P0 fixes, then proceed with P1 items
-

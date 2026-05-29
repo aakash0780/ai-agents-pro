@@ -1,97 +1,253 @@
-# AI Agents Pro - Project Context for AI Assistants
+# AI Agents Pro
 
-## 🚀 Project Overview
-**Current Objective**: Transform a standard agency website into a **SaaS Product Landing Page** 
-**Goal**: Sell "Custom AI Chatbots" for businesses.
-**Core Value Prop**: "Train ChatGPT on your data, embed on your site, support customers 24/7."
+AI Agents Pro is a full-stack web app for a dark-theme AI automation agency/SaaS experience.
+It includes the marketing website, authentication, Get Started lead intake, contact/newsletter capture, visitor tracking, dashboards, and blog content.
 
-## 🧩 Current Features & Status
+## What This Project Includes
 
-### 1. Frontend (React + Vite)
-- **HomePage (`src/pages/HomePage.jsx`)**:
-  - **Status**: ✅ SaaS Redesign Completed.
-  - **Features**: Product Hero, 3-Step "How it Works" (Fetch -> Train -> Deploy), Feature Grid, Testimonials.
-- **PricingPage (`src/pages/PricingPage.jsx`)**:
-  - **Status**: ✅ Hybrid Model Implemented.
-  - **Model**: Separated into **One-Time Setup** (Build fee) + **Monthly Platform** (Hosting) + **Usage** (Token costs).
-  - **Interactive**: Includes a slider to estimate monthly token usage costs.
-- **AboutPage (`src/pages/AboutPage.jsx`)**:
-  - **Status**: ✅ Active.
-  - **Features**: Includes "Nova" (AI Agent) as a team member alongside human staff.
+- React + Vite frontend with lazy-loaded routes and reusable UI components
+- Express backend with JWT auth, OAuth, validation, rate limiting, visitor tracking, and Socket.IO alerts
+- Prisma + PostgreSQL for users, contacts, leads, posts, and password reset tokens
+- OAuth entry points for Google, GitHub, Facebook, and Apple
+- Static blog API backed by `server/data/blog-posts.json`, plus authenticated Prisma-backed post management
+- Docker setup for frontend, backend, Postgres, nginx API proxy, and Socket.IO proxy
+- GitHub Actions CI/CD workflows
 
-### 2. Backend (Node.js + Express)
-- **Location**: `/server`
-- **Status**: ⚠️ Implementation pending full connection.
-- **Database**: Prisma (PostgreSQL).
-- **Issue**: Requires `dotenvx` to run scripts.
+## Tech Stack
 
-## 🛠️ Tech Stack
-- **Framework**: React 19, Vite 7
-- **Styling**: Tailwind CSS 4, Shadcn UI
-- **Animation**: Framer Motion
-- **Icons**: Lucide React
-- **Package Manager**: PNPM
+- Frontend: React 19, Vite 7, React Router 7
+- Styling/UI: Tailwind CSS 4, Radix UI primitives, custom component library
+- Backend: Node.js, Express, Passport, JWT, Zod
+- Database: PostgreSQL + Prisma ORM
+- Tooling: pnpm, ESLint, Docker, GitHub Actions
 
-## 🚦 How to Run & Troubleshooting
+## Local Development
 
 ### Prerequisites
-- **PNPM** installed
-- **PostgreSQL** (local, Docker, or a cloud DB like [Neon](https://neon.tech) / [Supabase](https://supabase.com))
 
-### 1. Environment variables
-A `.env` file is required so the backend can find `DATABASE_URL`. One was created from `.env.example`.
+- Node.js 20+ recommended
+- pnpm 10+
+- PostgreSQL (local or cloud)
 
-- **Edit `.env`** and set `DATABASE_URL` to your PostgreSQL connection string, for example:
-  - Local: `postgresql://USER:PASSWORD@localhost:5432/ai_agents_db`
-  - Create the database first: `createdb ai_agents_db` (or via your DB tool).
-- Optionally set `JWT_SECRET` (required in production). OAuth keys are only needed for Google/GitHub login.
+### 1. Create environment file
 
-### 2. Install dependencies (if not done)
+```bash
+cp .env.example .env
+```
+
+Required minimum values for local development:
+
+```env
+DATABASE_URL="postgresql://user:password@localhost:5432/ai_agents_db"
+JWT_SECRET="change-me-for-production"
+PORT=3001
+FRONTEND_URL="http://localhost:5173"
+VITE_API_URL="/api"
+```
+
+Notes:
+
+- `VITE_API_URL` should be `/api`. Vite proxies `/api` to `http://localhost:3001` during local development, and nginx proxies `/api` to the backend container in Docker.
+- Leave `VITE_SOCKET_URL` empty for same-origin Socket.IO. Vite/nginx proxy `/socket.io` to the backend.
+- Analytics and ad tracking are optional. Leave any vendor ID blank to disable that vendor.
+
+Optional analytics/ad tracking:
+
+```env
+VITE_GA4_MEASUREMENT_ID="G-XXXXXXXXXX"
+VITE_GOOGLE_SITE_VERIFICATION="your-google-search-console-verification-token"
+VITE_CLARITY_PROJECT_ID="your-microsoft-clarity-project-id"
+VITE_HOTJAR_SITE_ID="your-hotjar-site-id"
+VITE_META_PIXEL_ID="your-meta-pixel-id"
+```
+
+### 2. Install dependencies
+
 ```bash
 pnpm install
 ```
 
-### 3. Prisma (database client & schema)
-Allow Prisma build scripts (if pnpm warned about them), generate the client, and create tables:
+### 3. Prepare database
 
 ```bash
-pnpm approve-builds   # when prompted, approve @prisma/client, prisma
-npx prisma generate
-npx prisma db push    # or: npx prisma migrate dev
+pnpm exec prisma generate
+pnpm exec prisma db push
 ```
 
-### 4. Start the app
+If you prefer migrations instead of `db push`:
+
+```bash
+pnpm exec prisma migrate dev
+```
+
+### 4. Start frontend + backend
+
 ```bash
 pnpm dev:all
 ```
-- **Frontend**: http://localhost:5173  
-- **Backend**: http://localhost:3001 (see `PORT` in `.env`)
 
-## 🐳 Docker & CI/CD
+App URLs:
 
-The project is set up for **Docker** and **GitHub Actions** CI/CD.
+- Frontend: `http://localhost:5173`
+- Backend API: `http://localhost:3001/api`
+- Health check: `http://localhost:3001/api/health`
 
-### Docker (local or deploy)
+## Available Scripts
 
-Use the same `.env` as above. Compose expects `POSTGRES_*` (or defaults) and `JWT_SECRET`, `FRONTEND_URL`:
+- `pnpm dev`: start Vite frontend
+- `pnpm dev:server`: start Express backend
+- `pnpm dev:all`: run frontend + backend concurrently
+- `pnpm build`: production frontend build
+- `pnpm lint`: lint project
+- `pnpm preview`: preview built frontend
+- `pnpm db:push`: run Prisma `db push` via dotenvx
+- `pnpm db:studio`: open Prisma Studio via dotenvx
+
+## Frontend Routes
+
+Public routes:
+
+- `/`
+- `/about`
+- `/services`
+- `/pricing`
+- `/contact`
+- `/get-started`
+- `/login`
+- `/signup`
+- `/forgot-password`
+- `/reset-password`
+- `/auth/callback`
+- `/blog`
+- `/blog/:slug`
+
+Protected routes (auth required):
+
+- `/dashboard`
+- `/client-profit-dashboard`
+- `/profile`
+- `/blog/new`
+- `/blog/:slug/edit`
+- `/admin/visitors` (admin required)
+
+## Backend API
+
+Base URL: `/api`
+
+Authentication:
+
+- `POST /auth/signup`
+- `POST /auth/login`
+- `POST /auth/forgot-password`
+- `POST /auth/reset-password`
+- `GET /auth/me` (Bearer token)
+- `PUT /auth/profile` (Bearer token)
+
+OAuth:
+
+- `GET /auth/google`
+- `GET /auth/google/callback`
+- `GET /auth/github`
+- `GET /auth/github/callback`
+- `GET /auth/facebook`
+- `GET /auth/facebook/callback`
+- `GET /auth/apple`
+- `POST /auth/apple/callback`
+
+Contact + blog:
+
+- `POST /contact`
+- `POST /leads`
+- `POST /newsletter/subscribe`
+- `GET /blog/posts`
+- `GET /blog/posts/:slug`
+- `GET /posts`
+- `GET /posts/:slug`
+- `POST /posts` (admin only)
+- `PUT /posts/:id` (author or admin)
+- `DELETE /posts/:id` (author or admin)
+
+Utility:
+
+- `GET /health`
+- `POST /visitors/track`
+- `GET /visitors/stats` (admin)
+- `GET /events/cta`
+- `GET /` and `GET /api` for API info
+
+## Auth and Permissions
+
+- JWT token is expected in `Authorization: Bearer <token>`.
+- `ProtectedRoute` in the frontend blocks unauthenticated users.
+- Blog creation is restricted to `ADMIN`.
+- Blog update/delete is allowed for the post author or `ADMIN`.
+
+## Database Models (Prisma)
+
+- `User`: local + social auth fields, profile details, role
+- `Post`: blog content with author relation and publish timestamp
+- `PasswordResetToken`: hashed reset token + expiry
+- `Contact`: inbound lead/contact records
+- `Lead`: Get Started company intake records
+- `Service`: service metadata (defined in schema for future use)
+
+## Docker
+
+Run full stack with Docker Compose:
 
 ```bash
-# Optional: set Postgres and app env (or rely on .env)
-export POSTGRES_USER=postgres POSTGRES_PASSWORD=postgres POSTGRES_DB=ai_agents_db
-docker compose up -d --build
+docker compose up -d --build --force-recreate
 ```
 
-- **App**: http://localhost (frontend on port 80; `/api` is proxied to the backend).
-- **Backend** runs migrations on startup via `server/docker-entrypoint.sh`.
+If UI changes are not visible after an update, rebuild cleanly:
 
-See [DOCKER_AND_CI.md](DOCKER_AND_CI.md) for details and production notes.
+```bash
+docker compose down
+docker compose up -d --build --force-recreate
+```
 
-### CI/CD (GitHub Actions)
+Default behavior:
 
-- **CI** (`.github/workflows/ci.yml`): on push/PR to `main` or `develop` — lint, frontend build, Docker Compose build + smoke test. No secrets required; smoke test uses a generated `.env` with `DATABASE_URL` and `JWT_SECRET`.
-- **CD** (`.github/workflows/cd.yml`): on push to `main` — build and push backend + frontend images to GitHub Container Registry (`ghcr.io/<repo>/backend`, `ghcr.io/<repo>/frontend`). Uses `GITHUB_TOKEN`; no extra secrets needed for public repos.
+- Frontend serves on port `80`
+- Backend serves on port `3001` internally
+- Postgres serves on port `5432`
+- Browser API calls use `http://localhost/api` through nginx, not `http://localhost:3001/api`
+- Backend runs `prisma migrate deploy` on startup (`server/docker-entrypoint.sh`)
 
-## 🔮 Roadmap / "Best Concerns"
-1.  **Trust**: Need Privacy Policy & Terms regarding AI training.
-2.  **Dashboard**: Need a client portal for users to check their bot's chat history/analytics.
-3.  **Onboarding**: Currently redirects to WhatsApp. Need a self-serve signup flow.
+See [DOCKER_AND_CI.md](DOCKER_AND_CI.md) for CI/CD and container details.
+
+## Environment Variables
+
+Core backend:
+
+- `DATABASE_URL`
+- `JWT_SECRET`
+- `PORT`
+- `FRONTEND_URL`
+- `ALLOWED_ORIGINS` (comma-separated additional CORS origins)
+
+Frontend build/runtime:
+
+- `VITE_API_URL`
+- `VITE_SOCKET_URL`
+- `VITE_UMAMI_SCRIPT_URL`
+- `VITE_UMAMI_WEBSITE_ID`
+- `VITE_GA4_MEASUREMENT_ID`
+- `VITE_GOOGLE_SITE_VERIFICATION`
+- `VITE_CLARITY_PROJECT_ID`
+- `VITE_HOTJAR_SITE_ID`
+- `VITE_HOTJAR_VERSION`
+- `VITE_META_PIXEL_ID`
+
+OAuth (optional):
+
+- `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`
+- `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`
+- `FACEBOOK_APP_ID`, `FACEBOOK_APP_SECRET`
+- `APPLE_CLIENT_ID`, `APPLE_TEAM_ID`, `APPLE_KEY_ID`, `APPLE_PRIVATE_KEY`
+
+## Documentation
+
+- Setup guides: [`docs/setup`](docs/setup)
+- Audits and technical reviews: [`docs/audits`](docs/audits)
+- Project documentation index: [`docs/README.md`](docs/README.md)

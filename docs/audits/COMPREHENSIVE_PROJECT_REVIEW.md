@@ -1,6 +1,8 @@
 # 🔍 COMPREHENSIVE PROJECT REVIEW
 ## AI Agents Pro - Full Codebase Analysis
 
+> Current status note (April 30, 2026): this is a historical audit snapshot. For the current file-system hierarchy, route map, Docker setup, and API proxy guidance, use `PROJECT_STRUCTURE.md`, `README.md`, and `DOCKER_AND_CI.md` in the project root.
+
 **Date:** January 2025  
 **Reviewer:** Senior Frontend Engineer  
 **Scope:** Complete project audit including frontend, backend, configuration, and assets
@@ -803,4 +805,3 @@ ai-web/
 **Report Generated:** January 2025  
 **Total Issues Found:** 50+  
 **Estimated Total Fix Time:** 2-3 weeks for all improvements
-

@@ -1,490 +1,357 @@
 import { useState } from 'react'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
-import { Textarea } from '@/components/ui/textarea'
-import { Label } from '@/components/ui/label'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { CheckCircle2, Clock3, Mail, MapPin, MessageCircle, Phone } from 'lucide-react'
 import { toast } from 'sonner'
-import { motion } from 'framer-motion'
-import {
-  MessageCircle,
-  Mail,
-  Phone,
-  MapPin,
-  Clock,
-  Send,
-  CheckCircle,
-  Headphones,
-  Users,
-  Calendar,
-  Loader2,
-  AlertCircle
-} from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { SEO } from '@/components/SEO'
+import { trackCTA } from '@/utils/api'
+import { EMAIL, LINKS, PHONE } from '@/utils/constants'
+
+const initialForm = {
+  name: '',
+  email: '',
+  company: '',
+  phone: '',
+  companySize: '',
+  service: '',
+  message: '',
+  source: '',
+}
+
+const companySizes = ['1–10', '11–50', '51–200', '200+']
+const serviceOptions = [
+  'Sales Automation',
+  'Customer Support',
+  'Lead Qualification',
+  'Multi-Channel',
+  'Analytics',
+  'Full Package',
+  'Other',
+]
+const heardOptions = ['WhatsApp', 'LinkedIn', 'Google Search', 'Referral', 'Other']
+
+function validateForm(values) {
+  const errors = {}
+
+  if (!values.name.trim()) errors.name = 'Full name is required.'
+  if (!values.email.trim()) {
+    errors.email = 'Work email is required.'
+  } else if (!/^\S+@\S+\.\S+$/.test(values.email)) {
+    errors.email = 'Enter a valid email address.'
+  }
+  if (!values.company.trim()) errors.company = 'Company name is required.'
+  if (!values.companySize) errors.companySize = 'Select company size.'
+  if (!values.service) errors.service = 'Select a service.'
+  if (!values.message.trim()) {
+    errors.message = 'Message is required.'
+  } else if (values.message.trim().length < 20) {
+    errors.message = 'Message must be at least 20 characters.'
+  }
+
+  return errors
+}
 
 export function ContactPage() {
-  const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    phone: '',
-    company: '',
-    message: '',
-    service: ''
-  })
-  const [submitting, setSubmitting] = useState(false)
+  const [form, setForm] = useState(initialForm)
   const [errors, setErrors] = useState({})
+  const [loading, setLoading] = useState(false)
+  const [submitted, setSubmitted] = useState(false)
+  const [submitError, setSubmitError] = useState('')
 
-  const handleInputChange = (e) => {
-    const { name, value } = e.target
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }))
-    // Clear error
-    if (errors[name]) {
-      setErrors(prev => ({ ...prev, [name]: null }))
-    }
+  const onChange = (event) => {
+    const { name, value } = event.target
+    setForm((current) => ({ ...current, [name]: value }))
+    setErrors((current) => ({ ...current, [name]: '' }))
+    setSubmitError('')
   }
 
-  const handleSelectChange = (value) => {
-    setFormData(prev => ({
-      ...prev,
-      service: value
-    }))
-  }
+  const onSubmit = async (event) => {
+    event.preventDefault()
 
-  const validateForm = () => {
-    const newErrors = {}
-    if (!formData.name.trim()) newErrors.name = 'Name is required'
-    if (!formData.email.trim()) {
-      newErrors.email = 'Email is required'
-    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = 'Invalid email address'
-    }
-    if (!formData.message.trim()) newErrors.message = 'Message is required'
+    const validationErrors = validateForm(form)
+    setErrors(validationErrors)
 
-    setErrors(newErrors)
-    return Object.keys(newErrors).length === 0
-  }
-
-  const handleSubmit = async (e) => {
-    e.preventDefault()
-
-    if (!validateForm()) {
-      toast.error('Please fix the errors in the form')
+    if (Object.keys(validationErrors).length > 0) {
       return
     }
 
-    setSubmitting(true)
+    setLoading(true)
+    setSubmitError('')
 
     try {
-      // Create WhatsApp message with form data
-      const message = `Hi Akash, I'm interested in AI Agents Pro services.
-
-Name: ${formData.name}
-Email: ${formData.email}
-Phone: ${formData.phone}
-Company: ${formData.company}
-Service Interest: ${formData.service}
-Message: ${formData.message}`
-
-      const whatsappUrl = `https://wa.me/919967789335?text=${encodeURIComponent(message)}`
-
-      // Artificial delay for UX
-      await new Promise(resolve => setTimeout(resolve, 800))
-
-      window.open(whatsappUrl, '_blank')
-
-      // Reset form
-      setFormData({
-        name: '',
-        email: '',
-        phone: '',
-        company: '',
-        message: '',
-        service: ''
+      const response = await fetch('/api/contact', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: form.name,
+          email: form.email,
+          company: form.company,
+          phone: form.phone || undefined,
+          companySize: form.companySize,
+          service: form.service,
+          message: form.message,
+          source: form.source || undefined,
+        }),
       })
+      if (!response.ok) throw new Error('Server error')
 
-      toast.success('Form submitted! Opening WhatsApp...')
+      trackCTA('contact_form_submit', '/contact').catch(() => {})
+      toast.success('Message sent! We\'ll get back to you within 2 hours.')
+      setForm(initialForm)
+      setSubmitted(true)
     } catch (error) {
-      toast.error('Failed to submit form. Please try again.')
+      const message = error?.message || 'Unable to submit your request right now.'
+      setSubmitError(message)
+      toast.error(message)
     } finally {
-      setSubmitting(false)
+      setLoading(false)
     }
   }
 
-  const contactMethods = [
-    {
-      icon: MessageCircle,
-      title: 'WhatsApp',
-      description: 'Get instant responses to your queries',
-      value: '+91 99677 89335',
-      action: 'Chat Now',
-      link: 'https://wa.me/919967789335?text=Hi%20Akash%2C%20I%27d%20like%20to%20know%20more%20about%20AI%20Agents%20Pro.',
-      color: 'bg-green-500',
-      gradient: 'from-green-500 to-emerald-600'
-    },
-    {
-      icon: Mail,
-      title: 'Email',
-      description: 'Send us detailed inquiries',
-      value: 'aakash99677@gmail.com',
-      action: 'Send Email',
-      link: 'mailto:aakash99677@gmail.com?subject=AI%20Agents%20Inquiry',
-      color: 'bg-blue-500',
-      gradient: 'from-blue-500 to-indigo-600'
-    },
-    {
-      icon: Phone,
-      title: 'Phone',
-      description: 'Speak directly with our team',
-      value: '+91 99677 89335',
-      action: 'Call Now',
-      link: 'tel:+919967789335',
-      color: 'bg-purple-500',
-      gradient: 'from-purple-500 to-violet-600'
-    }
-  ]
-
-  const supportOptions = [
-    {
-      icon: Headphones,
-      title: '24/7 Support',
-      description: 'Round-the-clock assistance for all your needs'
-    },
-    {
-      icon: Users,
-      title: 'Dedicated Team',
-      description: 'Expert AI specialists assigned to your project'
-    },
-    {
-      icon: Calendar,
-      title: 'Flexible Scheduling',
-      description: 'Book consultations at your convenience'
-    }
-  ]
-
   return (
-    <div className="pt-16 min-h-screen bg-background text-foreground">
-      {/* Hero Section */}
-      <section className="relative py-20 overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-background to-accent/10 -z-10" />
-        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-primary/20 rounded-full blur-[100px] -z-10 animate-pulse" />
+    <main className="bg-[var(--bg)] pt-28 text-[var(--text)]">
+      <SEO
+        title="Contact AI Agents Pro | Get Started or Book a Demo"
+        description="Get in touch with the AI Agents Pro team. Book a demo, ask about pricing, or get a custom quote. WhatsApp, email, or contact form."
+        url="https://www.aiagentspro.in/contact"
+      />
 
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-          >
-            <Badge className="mb-6 px-4 py-1 text-sm bg-primary/10 text-primary border-primary/20 hover:bg-primary/20 transition-colors">
-              📞 Contact Us
-            </Badge>
-            <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold mb-6 tracking-tight">
-              Let's Transform Your Business{' '}
-              <span className="text-gradient">
-                Together
-              </span>
-            </h1>
-            <p className="text-xl md:text-2xl text-muted-foreground max-w-3xl mx-auto leading-relaxed">
-              Ready to revolutionize your customer interactions with AI? Get in touch with our experts.
-            </p>
-          </motion.div>
-        </div>
-      </section>
+      <section className="mx-auto grid max-w-7xl gap-8 px-4 py-12 sm:px-6 lg:grid-cols-[1.2fr_0.8fr] lg:px-8 lg:py-20">
+        <article className="rounded-lg border border-[var(--border-warm)] bg-[var(--card)] p-6">
+          <h1 className="font-[system-ui] text-[clamp(34px,5vw,48px)] font-light leading-[1.05] tracking-[-0.7px]">
+            Get Started or Book a Demo
+          </h1>
+          <p className="mt-4 text-[var(--text-2)]">
+            Tell us your goals and we&apos;ll map the right automation rollout for your team.
+          </p>
 
-      {/* Contact Methods */}
-      <section className="py-16 md:py-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16">
-            {contactMethods.map((method, index) => (
-              <motion.div
-                key={index}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.5, delay: index * 0.1 }}
+          {submitError ? (
+            <div className="mt-5 rounded-lg border border-[#7f1d1d] bg-[#2a1111] px-4 py-3 text-sm text-[#ffb4b4]">
+              {submitError}
+            </div>
+          ) : null}
+
+          {submitted ? (
+            <div className="mt-8 rounded-lg border border-[var(--border-accent)] bg-[var(--green-dim)] p-5 text-sm text-[var(--text)]">
+              <div className="flex items-start gap-3">
+                <CheckCircle2 className="mt-0.5 h-5 w-5 text-[var(--green)]" />
+                <div>
+                  <p className="font-medium text-[var(--green)]">
+                    Thanks {form.name}! We&apos;ll get back to you within 4 hours.
+                  </p>
+                  <p className="mt-2 text-[var(--text-2)]">
+                    If you want immediate support, use the WhatsApp button on the right.
+                  </p>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <form className="mt-8 space-y-5" onSubmit={onSubmit} noValidate>
+              <div className="grid gap-4 md:grid-cols-2">
+                <div>
+                  <label htmlFor="name" className="text-sm text-[var(--text-2)]">Full Name</label>
+                  <input
+                    id="name"
+                    name="name"
+                    value={form.name}
+                    onChange={onChange}
+                    className={`mt-1 h-11 w-full rounded-lg border bg-[#101010] px-3 text-sm text-[var(--text)] outline-none focus:border-[var(--green)] ${
+                      errors.name ? 'border-[#ef4444]' : 'border-[var(--border-warm)]'
+                    }`}
+                  />
+                  {errors.name ? <p className="mt-1 text-xs text-[#ff8b8b]">{errors.name}</p> : null}
+                </div>
+
+                <div>
+                  <label htmlFor="email" className="text-sm text-[var(--text-2)]">Work Email</label>
+                  <input
+                    id="email"
+                    name="email"
+                    type="email"
+                    value={form.email}
+                    onChange={onChange}
+                    className={`mt-1 h-11 w-full rounded-lg border bg-[#101010] px-3 text-sm text-[var(--text)] outline-none focus:border-[var(--green)] ${
+                      errors.email ? 'border-[#ef4444]' : 'border-[var(--border-warm)]'
+                    }`}
+                  />
+                  {errors.email ? <p className="mt-1 text-xs text-[#ff8b8b]">{errors.email}</p> : null}
+                </div>
+
+                <div>
+                  <label htmlFor="company" className="text-sm text-[var(--text-2)]">Company Name</label>
+                  <input
+                    id="company"
+                    name="company"
+                    value={form.company}
+                    onChange={onChange}
+                    className={`mt-1 h-11 w-full rounded-lg border bg-[#101010] px-3 text-sm text-[var(--text)] outline-none focus:border-[var(--green)] ${
+                      errors.company ? 'border-[#ef4444]' : 'border-[var(--border-warm)]'
+                    }`}
+                  />
+                  {errors.company ? <p className="mt-1 text-xs text-[#ff8b8b]">{errors.company}</p> : null}
+                </div>
+
+                <div>
+                  <label htmlFor="phone" className="text-sm text-[var(--text-2)]">Phone / WhatsApp Number (optional)</label>
+                  <input
+                    id="phone"
+                    name="phone"
+                    value={form.phone}
+                    onChange={onChange}
+                    className="mt-1 h-11 w-full rounded-lg border border-[var(--border-warm)] bg-[#101010] px-3 text-sm text-[var(--text)] outline-none focus:border-[var(--green)]"
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="companySize" className="text-sm text-[var(--text-2)]">Company Size</label>
+                  <select
+                    id="companySize"
+                    name="companySize"
+                    value={form.companySize}
+                    onChange={onChange}
+                    className={`mt-1 h-11 w-full rounded-lg border bg-[#101010] px-3 text-sm text-[var(--text)] outline-none focus:border-[var(--green)] ${
+                      errors.companySize ? 'border-[#ef4444]' : 'border-[var(--border-warm)]'
+                    }`}
+                  >
+                    <option value="">Select company size</option>
+                    {companySizes.map((size) => (
+                      <option key={size} value={size}>{size}</option>
+                    ))}
+                  </select>
+                  {errors.companySize ? <p className="mt-1 text-xs text-[#ff8b8b]">{errors.companySize}</p> : null}
+                </div>
+
+                <div>
+                  <label htmlFor="service" className="text-sm text-[var(--text-2)]">Service Interested In</label>
+                  <select
+                    id="service"
+                    name="service"
+                    value={form.service}
+                    onChange={onChange}
+                    className={`mt-1 h-11 w-full rounded-lg border bg-[#101010] px-3 text-sm text-[var(--text)] outline-none focus:border-[var(--green)] ${
+                      errors.service ? 'border-[#ef4444]' : 'border-[var(--border-warm)]'
+                    }`}
+                  >
+                    <option value="">Select service</option>
+                    {serviceOptions.map((option) => (
+                      <option key={option} value={option}>{option}</option>
+                    ))}
+                  </select>
+                  {errors.service ? <p className="mt-1 text-xs text-[#ff8b8b]">{errors.service}</p> : null}
+                </div>
+              </div>
+
+              <div>
+                <label htmlFor="message" className="text-sm text-[var(--text-2)]">Message</label>
+                <textarea
+                  id="message"
+                  name="message"
+                  rows="5"
+                  maxLength={1000}
+                  value={form.message}
+                  onChange={onChange}
+                  className={`mt-1 w-full rounded-lg border bg-[#101010] px-3 py-2 text-sm text-[var(--text)] outline-none focus:border-[var(--green)] ${
+                    errors.message ? 'border-[#ef4444]' : 'border-[var(--border-warm)]'
+                  }`}
+                />
+                <p className={`mt-1 text-xs ${1000 - form.message.length < 100 ? 'text-destructive' : 'text-[var(--text-3)]'}`}>
+                  {1000 - form.message.length} characters remaining
+                </p>
+                {errors.message ? <p className="mt-1 text-xs text-[#ff8b8b]">{errors.message}</p> : null}
+              </div>
+
+              <div>
+                <label htmlFor="source" className="text-sm text-[var(--text-2)]">How did you hear about us? (optional)</label>
+                <select
+                  id="source"
+                  name="source"
+                  value={form.source}
+                  onChange={onChange}
+                  className="mt-1 h-11 w-full rounded-lg border border-[var(--border-warm)] bg-[#101010] px-3 text-sm text-[var(--text)] outline-none focus:border-[var(--green)]"
+                >
+                  <option value="">Select source</option>
+                  {heardOptions.map((option) => (
+                    <option key={option} value={option}>{option}</option>
+                  ))}
+                </select>
+              </div>
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="inline-flex w-full items-center justify-center rounded-xl bg-[var(--green)] px-7 py-3.5 text-sm font-semibold text-[#050507] disabled:opacity-60"
               >
-                <Card className="group text-center hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 border-border/50 bg-card/50 backdrop-blur-sm h-full">
-                  <CardContent className="p-8">
-                    <div className={`w-20 h-20 bg-gradient-to-br ${method.gradient} rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg transform group-hover:scale-110 transition-transform duration-300`}>
-                      <method.icon className="h-10 w-10 text-white" />
-                    </div>
-                    <h3 className="text-2xl font-bold mb-2">{method.title}</h3>
-                    <p className="text-muted-foreground mb-4">{method.description}</p>
-                    <p className="font-medium mb-6 text-lg">{method.value}</p>
-                    <Button className={`w-full bg-gradient-to-r ${method.gradient} hover:opacity-90 transition-opacity`} asChild>
-                      <a href={method.link} target="_blank" rel="noopener noreferrer" aria-label={`Contact via ${method.title}`}>
-                        {method.action}
-                      </a>
-                    </Button>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            ))}
+                {loading ? 'Sending...' : 'Send Message'}
+              </button>
+            </form>
+          )}
+        </article>
+
+        <aside className="rounded-lg border border-[var(--border-warm)] bg-[var(--card)] p-6">
+          <h2 className="font-[system-ui] text-[32px] leading-[1.1] tracking-[-0.8px]">
+            Let&apos;s talk about your automation needs.
+          </h2>
+          <p className="mt-3 text-[var(--text-2)]">
+            Most teams are live within 48 hours. Let&apos;s find the right plan for you.
+          </p>
+
+          <div className="mt-6 space-y-4 text-sm text-[var(--text-2)]">
+            <a
+              href="https://wa.me/919967789335?text=Hi%20AI%20Agents%20Pro%2C%20I%27d%20like%20to%20get%20started."
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-start gap-3 rounded-lg border border-[var(--border)] bg-[#0c0c10] p-3 no-underline"
+            >
+              <MessageCircle className="mt-0.5 h-4 w-4 text-[var(--green)]" />
+              <span>WhatsApp: +91 99677 89335 — Click to open chat</span>
+            </a>
+            <div className="flex items-start gap-3 rounded-lg border border-[var(--border)] bg-[#0c0c10] p-3">
+              <Mail className="mt-0.5 h-4 w-4 text-[var(--green)]" />
+              <span>{EMAIL}</span>
+            </div>
+            <div className="flex items-start gap-3 rounded-lg border border-[var(--border)] bg-[#0c0c10] p-3">
+              <Clock3 className="mt-0.5 h-4 w-4 text-[var(--green)]" />
+              <span>We respond within 2 hours (Mon–Sat, 9AM–8PM IST)</span>
+            </div>
+            <div className="flex items-start gap-3 rounded-lg border border-[var(--border)] bg-[#0c0c10] p-3">
+              <MapPin className="mt-0.5 h-4 w-4 text-[var(--green)]" />
+              <span>Mumbai, Maharashtra, India</span>
+            </div>
+            <div className="flex items-start gap-3 rounded-lg border border-[var(--border)] bg-[#0c0c10] p-3">
+              <Phone className="mt-0.5 h-4 w-4 text-[var(--green)]" />
+              <span>{PHONE}</span>
+            </div>
           </div>
-        </div>
-      </section>
 
-      {/* Contact Form */}
-      <section className="py-20 relative">
-        <div className="absolute inset-0 bg-secondary/50 -z-10" />
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-          <motion.div
-            initial={{ opacity: 0 }}
-            whileInView={{ opacity: 1 }}
-            className="text-center mb-16"
-          >
-            <h2 className="text-3xl md:text-5xl font-bold mb-6">Send Us a Message</h2>
-            <p className="text-xl text-muted-foreground">
-              Fill out the form below and we'll get back to you within 24 hours
-            </p>
-          </motion.div>
-
-          <motion.div
-            initial={{ scale: 0.95, opacity: 0 }}
-            whileInView={{ scale: 1, opacity: 1 }}
-            transition={{ duration: 0.5 }}
-          >
-            <Card className="glass border-none shadow-2xl relative overflow-hidden">
-              <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-primary via-purple-500 to-pink-500" />
-              <CardHeader className="pt-8">
-                <CardTitle className="text-3xl text-center font-bold">Get In Touch</CardTitle>
-              </CardHeader>
-              <CardContent className="p-8">
-                <form onSubmit={handleSubmit} className="space-y-6" noValidate>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <motion.div 
-                      className="space-y-2"
-                      initial={{ opacity: 0, y: 10 }}
-                      whileInView={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.1 }}
-                    >
-                      <Label htmlFor="name" className="text-sm font-medium">Full Name *</Label>
-                      <div className="relative">
-                        <Input
-                          id="name"
-                          name="name"
-                          value={formData.name}
-                          onChange={handleInputChange}
-                          placeholder="Your full name"
-                          required
-                          className={cn(
-                            "transition-all duration-300 h-12 pl-4",
-                            errors.name && "border-destructive focus-visible:ring-destructive/30"
-                          )}
-                          aria-invalid={!!errors.name}
-                          aria-describedby={errors.name ? "name-error" : undefined}
-                        />
-                      </div>
-                      {errors.name && (
-                        <motion.p 
-                          id="name-error" 
-                          className="text-sm text-destructive flex items-center gap-1 mt-1"
-                          initial={{ opacity: 0, x: -10 }}
-                          animate={{ opacity: 1, x: 0 }}
-                        >
-                          <AlertCircle className="h-3 w-3" /> {errors.name}
-                        </motion.p>
-                      )}
-                    </motion.div>
-                    <motion.div 
-                      className="space-y-2"
-                      initial={{ opacity: 0, y: 10 }}
-                      whileInView={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.15 }}
-                    >
-                      <Label htmlFor="email" className="text-sm font-medium">Email Address *</Label>
-                      <div className="relative">
-                        <Input
-                          id="email"
-                          name="email"
-                          type="email"
-                          value={formData.email}
-                          onChange={handleInputChange}
-                          placeholder="your@email.com"
-                          required
-                          className={cn(
-                            "transition-all duration-300 h-12 pl-4",
-                            errors.email && "border-destructive focus-visible:ring-destructive/30"
-                          )}
-                          aria-invalid={!!errors.email}
-                          aria-describedby={errors.email ? "email-error" : undefined}
-                        />
-                      </div>
-                      {errors.email && (
-                        <motion.p 
-                          id="email-error" 
-                          className="text-sm text-destructive flex items-center gap-1 mt-1"
-                          initial={{ opacity: 0, x: -10 }}
-                          animate={{ opacity: 1, x: 0 }}
-                        >
-                          <AlertCircle className="h-3 w-3" /> {errors.email}
-                        </motion.p>
-                      )}
-                    </motion.div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <motion.div 
-                      className="space-y-2"
-                      initial={{ opacity: 0, y: 10 }}
-                      whileInView={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.2 }}
-                    >
-                      <Label htmlFor="phone" className="text-sm font-medium">Phone Number</Label>
-                      <Input
-                        id="phone"
-                        name="phone"
-                        value={formData.phone}
-                        onChange={handleInputChange}
-                        placeholder="+91 XXXXX XXXXX"
-                        className="transition-all duration-300 h-12 pl-4"
-                      />
-                    </motion.div>
-                    <motion.div 
-                      className="space-y-2"
-                      initial={{ opacity: 0, y: 10 }}
-                      whileInView={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.25 }}
-                    >
-                      <Label htmlFor="company" className="text-sm font-medium">Company Name</Label>
-                      <Input
-                        id="company"
-                        name="company"
-                        value={formData.company}
-                        onChange={handleInputChange}
-                        placeholder="Your company name"
-                        className="transition-all duration-300 h-12 pl-4"
-                      />
-                    </motion.div>
-                  </div>
-
-                  <motion.div 
-                    className="space-y-2"
-                    initial={{ opacity: 0, y: 10 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.3 }}
-                  >
-                    <Label htmlFor="service" className="text-sm font-medium">Service Interest</Label>
-                    <Select value={formData.service} onValueChange={handleSelectChange}>
-                      <SelectTrigger className="h-12 transition-all duration-300">
-                        <SelectValue placeholder="Select a service" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Pilot Project">Pilot Project (₹1.5L)</SelectItem>
-                        <SelectItem value="Growth">Growth Engagement (₹4L+)</SelectItem>
-                        <SelectItem value="Enterprise">Enterprise Solution</SelectItem>
-                        <SelectItem value="AI Agents">AI Agents & Workflows</SelectItem>
-                        <SelectItem value="Task Automation">Task Automation</SelectItem>
-                        <SelectItem value="Custom Chatbot">Custom AI Chatbot</SelectItem>
-                        <SelectItem value="Consultation">Free Consultation</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </motion.div>
-
-                  <motion.div 
-                    className="space-y-2"
-                    initial={{ opacity: 0, y: 10 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.35 }}
-                  >
-                    <Label htmlFor="message" className="text-sm font-medium">Message *</Label>
-                    <Textarea
-                      id="message"
-                      name="message"
-                      value={formData.message}
-                      onChange={handleInputChange}
-                      placeholder="Tell us about your business needs..."
-                      rows={5}
-                      required
-                      className={cn(
-                        "transition-all duration-300 resize-none",
-                        errors.message && "border-destructive focus-visible:ring-destructive/30"
-                      )}
-                      aria-invalid={!!errors.message}
-                      aria-describedby={errors.message ? "message-error" : undefined}
-                    />
-                    {errors.message && (
-                      <motion.p 
-                        id="message-error" 
-                        className="text-sm text-destructive flex items-center gap-1 mt-1"
-                        initial={{ opacity: 0, x: -10 }}
-                        animate={{ opacity: 1, x: 0 }}
-                      >
-                        <AlertCircle className="h-3 w-3" /> {errors.message}
-                      </motion.p>
-                    )}
-                  </motion.div>
-
-                  <motion.div
-                    initial={{ opacity: 0, y: 10 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.4 }}
-                  >
-                    <Button
-                      type="submit"
-                      disabled={submitting}
-                      className="w-full h-12 text-base font-semibold bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white transition-all duration-300 hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                    >
-                      {submitting ? (
-                        <>
-                          <Loader2 className="h-5 w-5 animate-spin" />
-                          Submitting...
-                        </>
-                      ) : (
-                        <>
-                          <Send className="h-5 w-5" />
-                          Send Message
-                        </>
-                      )}
-                    </Button>
-                  </motion.div>
-                </form>
-              </CardContent>
-            </Card>
-          </motion.div>
-        </div>
-      </section>
-
-      {/* Support Options */}
-      <section className="py-20 bg-background">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <motion.div
-            initial={{ opacity: 0 }}
-            whileInView={{ opacity: 1 }}
-            className="text-center mb-16"
-          >
-            <h2 className="text-3xl md:text-5xl font-bold mb-6">Why Choose Our Support?</h2>
-            <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-              We're committed to providing exceptional support throughout your AI journey
-            </p>
-          </motion.div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {supportOptions.map((option, index) => (
-              <motion.div
-                key={index}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: index * 0.1 }}
-              >
-                <Card className="text-center hover:shadow-xl transition-all duration-300 border-none bg-secondary/30 h-full">
-                  <CardContent className="p-8">
-                    <div className="w-16 h-16 bg-gradient-to-br from-primary to-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-md text-white">
-                      <option.icon className="h-8 w-8" />
-                    </div>
-                    <h3 className="text-xl font-semibold mb-3">{option.title}</h3>
-                    <p className="text-muted-foreground">{option.description}</p>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            ))}
+          <div className="mt-6 flex flex-col gap-3">
+            <a
+              href={LINKS.getStarted}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center justify-center rounded-xl bg-[var(--green)] px-6 py-3 text-sm font-semibold text-[#050507] no-underline"
+            >
+              💬 Chat on WhatsApp
+            </a>
+            <a
+              href={LINKS.watchDemo}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center justify-center rounded-xl border border-[var(--border-warm)] px-6 py-3 text-sm font-medium text-[#fff] no-underline"
+            >
+              📅 Book a Demo Call
+            </a>
           </div>
-        </div>
+
+          <div className="mt-6 text-sm text-[var(--text-3)]">
+            <p>Office Hours</p>
+            <p className="mt-2">Mon–Fri: 9:00 AM – 8:00 PM IST</p>
+            <p>Sat: 10:00 AM – 4:00 PM IST</p>
+            <p>Sun: WhatsApp support only</p>
+          </div>
+
+          <p className="mt-6 text-xs uppercase tracking-[0.18em] text-[var(--text-3)]">
+            500+ clients · SOC 2 Compliant · 99.9% Uptime
+          </p>
+        </aside>
       </section>
-    </div>
+    </main>
   )
 }

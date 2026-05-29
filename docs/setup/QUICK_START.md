@@ -16,7 +16,9 @@ cat > .env << EOF
 DATABASE_URL="postgresql://username:password@localhost:5432/ai_agents_db?schema=public"
 JWT_SECRET="your-super-secret-jwt-key-change-this-in-production"
 PORT=3001
-VITE_API_URL=http://localhost:3001/api
+FRONTEND_URL="http://localhost:5173"
+VITE_API_URL="/api"
+VITE_SOCKET_URL=""
 EOF
 ```
 
@@ -56,12 +58,16 @@ cat > .env << 'EOF'
 DATABASE_URL="postgresql://your_user:your_password@localhost:5432/ai_agents_db?schema=public"
 JWT_SECRET="change-this-to-a-random-string-in-production"
 PORT=3001
-VITE_API_URL=http://localhost:3001/api
+FRONTEND_URL="http://localhost:5173"
+VITE_API_URL="/api"
+VITE_SOCKET_URL=""
 EOF
 
 # Edit with your actual database credentials
 nano .env  # or use your preferred editor
 ```
+
+`VITE_API_URL="/api"` is intentional. Vite proxies `/api` and `/socket.io` to `http://localhost:3001` during local development, and nginx uses the same paths in Docker.
 
 ### 2. Set Up PostgreSQL Database
 ```bash
@@ -88,6 +94,12 @@ pnpm dev:server
 
 # Terminal 2 - Frontend
 pnpm dev
+```
+
+Or run both together:
+
+```bash
+pnpm dev:all
 ```
 
 ## Quick Setup Script

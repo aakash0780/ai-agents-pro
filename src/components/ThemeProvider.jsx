@@ -18,7 +18,7 @@ export function ThemeProvider({ children, ...props }) {
       attribute="class" 
       defaultTheme="dark"
       enableSystem
-      disableTransitionOnChange
+      disableTransitionOnChange={false}
       storageKey="theme-preference"
       {...props}
     >
@@ -26,6 +26,3 @@ export function ThemeProvider({ children, ...props }) {
     </NextThemesProvider>
   )
 }
-
-export { useTheme } from 'next-themes'
-

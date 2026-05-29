@@ -16,8 +16,17 @@ dist/
 credentials.json
 token.json
 
-# IDE
+# IDE / editor / agent state
 .vscode/
+.cursor/
+.antigravitycli/
+.codex
+
+# Python virtualenv
+myenv/
+
+# CI workflows (kept local only)
+.github/workflows/
 
 # Logs
 *.log

@@ -1,6 +1,8 @@
+/* eslint-disable no-unused-vars */
 import { motion, AnimatePresence } from 'framer-motion'
+import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
-import { ArrowRight, MessageCircle, X } from 'lucide-react'
+import { ArrowRight, Sparkles, X } from 'lucide-react'
 import { useState, useEffect } from 'react'
 
 export function StickyCTA() {
@@ -15,7 +17,7 @@ export function StickyCTA() {
     }
     
     checkMobile()
-    window.addEventListener('resize', checkMobile)
+    window.addEventListener('resize', checkMobile, { passive: true })
     return () => window.removeEventListener('resize', checkMobile)
   }, [])
 
@@ -43,7 +45,7 @@ export function StickyCTA() {
       }
     }
 
-    window.addEventListener('scroll', handleScroll)
+    window.addEventListener('scroll', handleScroll, { passive: true })
     return () => window.removeEventListener('scroll', handleScroll)
   }, [isMobile, isDismissed])
 
@@ -67,25 +69,24 @@ export function StickyCTA() {
           <div className="relative w-full flex justify-center">
             <Button
               size="lg"
-              className="rounded-full px-6 sm:px-8 py-5 sm:py-6 h-auto text-sm sm:text-base font-semibold bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 shadow-2xl hover:shadow-xl transition-all hover:scale-105 active:scale-95 text-white flex items-center gap-2 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-blue-500 focus-visible:ring-offset-slate-950"
+              className="h-auto rounded-md border border-border bg-card px-6 py-5 text-sm font-semibold text-primary shadow-2xl transition-all hover:scale-105 hover:bg-background hover:shadow-xl active:scale-95 sm:px-8 sm:py-6 sm:text-base"
               asChild
             >
-              <a
-                href="https://wa.me/919967789335?text=Hi%20Akash%2C%20I%27d%20like%20to%20see%20the%20live%20demo%20for%20your%20AI%20support%20agent."
-                target="_blank"
-                rel="noopener noreferrer"
+              <Link
+                to="/get-started"
                 className="flex items-center gap-2 no-underline"
-                aria-label="See the live demo on WhatsApp"
+                aria-label="Open get started page"
               >
-                <MessageCircle className="h-4 w-4 sm:h-5 sm:w-5" />
-                <span>See Live Demo</span>
+                <Sparkles className="h-4 w-4 sm:h-5 sm:w-5" />
+                <span>Get Started</span>
                 <ArrowRight className="h-3 w-3 sm:h-4 sm:w-4" />
-              </a>
+              </Link>
             </Button>
             
             <button
+              type="button"
               onClick={handleDismiss}
-              className="absolute right-0 top-1/2 -translate-y-1/2 -translate-x-14 p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
+              className="absolute right-0 top-1/2 -translate-y-1/2 -translate-x-14 p-1 text-muted-foreground hover:text-foreground transition-colors"
               aria-label="Dismiss call to action button"
               title="Dismiss this button"
             >

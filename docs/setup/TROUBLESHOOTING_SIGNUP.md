@@ -6,12 +6,13 @@
 
 **Symptom:** Signup fails with "Unable to connect to server" error
 
-**Solution:** Start the backend server:
+**Solution:** Start the backend server and frontend:
 ```bash
 pnpm dev:server
+pnpm dev
 ```
 
-The server should start on `http://localhost:3001`
+The backend should start on `http://localhost:3001`. The browser should call the proxied frontend path `/api`, for example `http://localhost:5173/api/auth/signup`.
 
 ### 2. Check Browser Console
 
@@ -27,17 +28,19 @@ Open browser DevTools (F12) and check:
 
 **Solution:** Make sure:
 - Backend server is running on port 3001
-- Frontend is trying to connect to `http://localhost:3001/api`
-- Check `.env` file has: `VITE_API_URL=http://localhost:3001/api`
+- Frontend is trying to connect to `/api`
+- Check `.env` file has: `VITE_API_URL="/api"`
+- Vite dev server is running so `/api` can proxy to the backend
 
 ### 4. API URL Configuration
 
 Check your `.env` file:
 ```env
-VITE_API_URL=http://localhost:3001/api
+VITE_API_URL="/api"
+VITE_SOCKET_URL=""
 ```
 
-If this is missing or wrong, the frontend won't know where to send requests.
+If `VITE_API_URL` is set to `http://localhost:3001/api`, Docker users will see connection failures because the backend port is internal to Compose. Use `/api` so Vite/nginx can proxy correctly.
 
 ### 5. Database Connection
 
@@ -64,13 +67,21 @@ curl -X POST http://localhost:3001/api/auth/signup \
   -d '{"email":"test@example.com","password":"test123","name":"Test User"}'
 ```
 
-If this works, the issue is with the frontend. If it doesn't, the issue is with the backend.
+For Docker, test through nginx instead:
+
+```bash
+curl -X POST http://localhost/api/auth/signup \
+  -H "Content-Type: application/json" \
+  -d '{"email":"test@example.com","password":"test123","name":"Test User"}'
+```
+
+If the direct backend URL works but `/api` does not, check Vite/nginx proxy configuration. If neither works, check backend logs and database connectivity.
 
 ## Quick Checklist
 
 - [ ] Backend server is running (`pnpm dev:server`)
 - [ ] Frontend is running (`pnpm dev`)
-- [ ] `.env` file has `VITE_API_URL=http://localhost:3001/api`
+- [ ] `.env` file has `VITE_API_URL="/api"`
 - [ ] PostgreSQL is running
 - [ ] Database migrations are complete (`npx prisma migrate dev`)
 - [ ] Browser console shows no errors

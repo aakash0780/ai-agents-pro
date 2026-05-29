@@ -1,28 +1,38 @@
-import { createContext, useContext, useState, useEffect } from 'react';
-import { authAPI } from '@/lib/api';
+import { useState, useEffect } from 'react';
+import { authAPI, removeToken } from '@/lib/api';
 import { toast } from 'sonner';
-
-const AuthContext = createContext(null);
+import { AuthContext } from '@/contexts/auth-context';
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Check if user is logged in on mount
   useEffect(() => {
     checkAuth();
   }, []);
 
+  useEffect(() => {
+    if (!user) return undefined;
+
+    const refreshTimer = window.setInterval(async () => {
+      try {
+        await authAPI.refresh();
+      } catch {
+        setUser(null);
+      }
+    }, 12 * 60 * 1000);
+
+    return () => window.clearInterval(refreshTimer);
+  }, [user]);
+
   const checkAuth = async () => {
     try {
-      const token = localStorage.getItem('authToken');
-      if (token) {
-        const response = await authAPI.getCurrentUser();
-        setUser(response.user);
-      }
-    } catch (error) {
-      // Token is invalid or expired
-      localStorage.removeItem('authToken');
+      // Cookies are sent automatically — no localStorage token needed
+      const response = await authAPI.getCurrentUser();
+      setUser(response.user);
+    } catch {
+      // 401 means no valid session; clear any legacy localStorage entries
+      removeToken();
       setUser(null);
     } finally {
       setLoading(false);
@@ -53,10 +63,24 @@ export function AuthProvider({ children }) {
     }
   };
 
-  const logout = () => {
-    authAPI.logout();
+  const logout = async () => {
+    await authAPI.logout();
     setUser(null);
     toast.success('Logged out successfully');
+  };
+
+  const completeOAuth = async () => {
+    // Cookies already set server-side; just fetch the user
+    const response = await authAPI.getCurrentUser();
+    setUser(response.user);
+    return response.user;
+  };
+
+  const loginWithOtp = async (email, otp) => {
+    const response = await authAPI.verifyOtp(email, otp);
+    setUser(response.user);
+    toast.success('Logged in successfully!');
+    return response;
   };
 
   const updateProfile = async (profileData) => {
@@ -77,19 +101,14 @@ export function AuthProvider({ children }) {
     signup,
     login,
     logout,
+    completeOAuth,
+    loginWithOtp,
     updateProfile,
     checkAuth,
+    clearSession: removeToken,
     isAuthenticated: !!user,
+    isAdmin: String(user?.role || '').toUpperCase() === 'ADMIN',
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
-
-export function useAuth() {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
-}
-

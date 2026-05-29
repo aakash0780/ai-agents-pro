@@ -1,109 +1,224 @@
-# 📁 Project Structure
+# Project Structure
 
-This document outlines the organized structure of the AI Agents Pro project.
+This document describes the current file-system hierarchy for the AI Agents Pro project.
 
-## 🗂️ Directory Organization
+## Root Level
 
-### Root Level
+```text
+ai-web-main/
+├── .github/
+│   ├── copilot-instructions.md
+│   └── workflows/
+│       ├── ci.yml
+│       └── cd.yml
+├── .vscode/
+│   └── extensions.json
+├── docs/
+│   ├── audits/
+│   ├── setup/
+│   ├── AGENTS.md
+│   ├── AI_AUTOMATION_BUSINESS_BLUEPRINT.md
+│   └── README.md
+├── prisma/
+│   ├── migrations/
+│   └── schema.prisma
+├── public/
+│   ├── favicon.ico
+│   ├── favicon.svg
+│   ├── og-image.svg
+│   ├── robots.txt
+│   └── sitemap.xml
+├── scripts/
+│   ├── check-env.js
+│   ├── fix-db-permissions.sh
+│   ├── fix-permissions-quick.sh
+│   ├── run.sh
+│   ├── setup-env.sh
+│   ├── verify-env.js
+│   ├── verify-setup.sh
+│   └── README.md
+├── server/
+│   ├── config/
+│   ├── data/
+│   ├── middleware/
+│   ├── routes/
+│   ├── services/
+│   ├── utils/
+│   ├── docker-entrypoint.sh
+│   ├── index.js
+│   └── validation.js
+├── src/
+│   ├── components/
+│   ├── constants/
+│   ├── contexts/
+│   ├── hooks/
+│   ├── lib/
+│   ├── pages/
+│   ├── styles/
+│   ├── utils/
+│   ├── App.jsx
+│   ├── index.css
+│   └── main.jsx
+├── BACKEND_OPTIMIZATION_SUMMARY.md
+├── DOCKER_AND_CI.md
+├── Dockerfile.backend
+├── Dockerfile.frontend
+├── FRONTEND_OPTIMIZATION_SUMMARY.md
+├── README.md
+├── components.json
+├── docker-compose.yml
+├── eslint.config.js
+├── index.html
+├── jsconfig.json
+├── nginx.conf
+├── package.json
+├── pnpm-lock.yaml
+└── vite.config.js
 ```
-ai-web/
-├── 📄 Configuration Files
-│   ├── package.json          # Dependencies and scripts
-│   ├── vite.config.js        # Vite build configuration
-│   ├── components.json       # shadcn/ui configuration
-│   ├── eslint.config.js      # ESLint configuration
-│   ├── jsconfig.json         # JavaScript path aliases
-│   └── index.html           # HTML entry point
-│
-├── 📚 docs/                  # All documentation
-│   ├── audits/               # Technical audit reports
-│   ├── setup/                # Setup and troubleshooting guides
-│   └── README.md             # Documentation index
-│
-├── 🔧 scripts/                # Utility scripts
-│   ├── *.sh                  # Shell scripts
-│   ├── *.js                  # JavaScript utilities
-│   └── README.md             # Scripts documentation
-│
-├── 💻 src/                    # Source code
-│   ├── components/           # React components
-│   │   ├── ui/               # shadcn/ui components
-│   │   └── [custom components]
-│   ├── pages/                # Page components
-│   ├── contexts/             # React contexts
-│   ├── hooks/                # Custom hooks
-│   └── lib/                  # Utilities
-│
-├── 🗄️ server/                 # Backend server
-│   └── index.js              # Express server
-│
-├── 🗃️ prisma/                  # Database
-│   ├── schema.prisma         # Database schema
-│   └── migrations/           # Database migrations
-│
-└── 🖼️ public/                 # Static assets
-    └── [images, favicon, etc.]
+
+Generated or local-only directories such as `node_modules/`, `dist/`, `.git/`, `.cursor/`, and local `.env` files are intentionally excluded from the canonical hierarchy.
+
+## Frontend Source
+
+```text
+src/
+├── components/
+│   ├── landing/                 # Home-page immersive/interactive sections
+│   ├── shared/                  # Reusable marketing helpers
+│   ├── ui/                      # Radix/shadcn-style primitives
+│   ├── FeaturedIntegrationsSection.jsx
+│   ├── Footer.jsx
+│   ├── Navbar.jsx
+│   ├── ProtectedRoute.jsx
+│   ├── SEO.jsx
+│   └── TopProgressBar.jsx
+├── constants/
+│   ├── blog.js
+│   ├── featured-integrations.js
+│   ├── integrations.js
+│   ├── pricing.js
+│   ├── services.js
+│   ├── site.js
+│   └── team.js
+├── contexts/
+│   ├── AuthContext.jsx
+│   └── auth-context.js
+├── hooks/
+│   ├── useAuth.js
+│   ├── useBlogPosts.js
+│   ├── useFormField.js
+│   ├── useScrollReveal.js
+│   ├── useTheme.js
+│   └── useVisitorTracking.js
+├── lib/
+│   ├── analytics.js
+│   ├── api.js
+│   └── utils.js
+├── pages/
+│   ├── admin/
+│   │   └── VisitorDashboard.jsx
+│   ├── LandingHomePage.jsx
+│   ├── GetStartedPage.jsx
+│   ├── LoginPage.jsx
+│   ├── SignupPage.jsx
+│   ├── ForgotPasswordPage.jsx
+│   ├── ResetPasswordPage.jsx
+│   ├── DashboardPage.jsx
+│   ├── ClientProfitDashboardPage.jsx
+│   ├── ProfilePage.jsx
+│   ├── BlogPage.jsx
+│   ├── BlogPostPage.jsx
+│   └── NewPostPage.jsx
+├── styles/
+├── utils/
+├── App.jsx
+├── index.css
+└── main.jsx
 ```
 
----
+## Backend Source
 
-## 📚 Documentation Structure
+```text
+server/
+├── config/
+│   └── passport.js             # OAuth provider setup
+├── data/
+│   ├── blog-posts.json         # Public blog content source
+│   └── subscribers.json        # Local newsletter fallback/storage
+├── middleware/
+│   ├── rateLimiter.js
+│   ├── trackVisit.js
+│   └── validation.js
+├── routes/
+│   ├── auth.js
+│   ├── blog.js                 # Static public blog API under /api/blog
+│   ├── contact.js
+│   ├── events.js
+│   ├── newsletter.js
+│   └── visitors.js
+├── services/
+│   └── visitorTracker.js
+├── utils/
+│   ├── mailer.js
+│   └── otp.js
+├── docker-entrypoint.sh
+├── index.js                    # Main Express app and Prisma-backed APIs
+└── validation.js               # Zod request schemas
+```
 
-### `/docs/audits/`
-Technical audit and review reports:
-- `COMPREHENSIVE_PROJECT_REVIEW.md` - Full project analysis
-- `TECHNICAL_UI_AUDIT.md` - React + Tailwind technical audit
-- `UI_AUDIT_REPORT.md` - UI/UX audit report
-- `UNUSED_FILES_REPORT.md` - Unused files cleanup report
+## Route Map
 
-### `/docs/setup/`
-Setup, configuration, and troubleshooting guides:
-- `SETUP.md` - Main setup instructions
-- `QUICK_START.md` - Quick start guide
-- `AUTHENTICATION_FEATURES.md` - Authentication documentation
-- `FIX_PERMISSIONS.md` - Permission fixing guide
-- `TROUBLESHOOTING_SIGNUP.md` - Signup troubleshooting
+Public frontend routes:
 
-### `/docs/`
-General documentation:
-- `AGENTS.md` - AI agent instructions
-- `AI_AUTOMATION_BUSINESS_BLUEPRINT.md` - Business blueprint
-- `README.md` - Documentation index
+- `/`
+- `/services`
+- `/pricing`
+- `/about`
+- `/blog`
+- `/blog/:slug`
+- `/contact`
+- `/get-started`
+- `/login`
+- `/signup`
+- `/forgot-password`
+- `/reset-password`
+- `/auth/callback`
 
----
+Protected frontend routes:
 
-## 🔧 Scripts Structure
+- `/dashboard`
+- `/client-profit-dashboard`
+- `/profile`
+- `/blog/new`
+- `/blog/:slug/edit`
+- `/admin/visitors` (admin)
 
-### `/scripts/`
-Utility scripts and helpers:
-- `setup-env.sh` - Environment setup
-- `verify-setup.sh` - Verify project setup
-- `run.sh` - Run project
-- `fix-db-permissions.sh` - Fix database permissions
-- `fix-permissions-quick.sh` - Quick permission fix
-- `check-env.js` - Check environment variables
-- `verify-env.js` - Verify environment configuration
+## Documentation
 
----
+```text
+docs/
+├── audits/
+│   ├── COMPREHENSIVE_PROJECT_REVIEW.md
+│   ├── TECHNICAL_UI_AUDIT.md
+│   ├── UI_AUDIT_REPORT.md
+│   └── UNUSED_FILES_REPORT.md
+├── setup/
+│   ├── AUTHENTICATION_FEATURES.md
+│   ├── FIX_PERMISSIONS.md
+│   ├── QUICK_START.md
+│   ├── SETUP.md
+│   └── TROUBLESHOOTING_SIGNUP.md
+├── AGENTS.md
+├── AI_AUTOMATION_BUSINESS_BLUEPRINT.md
+└── README.md
+```
 
-## 💡 Benefits of This Organization
+## Operational Files
 
-1. **Clean Root Directory** - Only essential config files in root
-2. **Easy Navigation** - Logical grouping of related files
-3. **Better Maintainability** - Easy to find and update documentation
-4. **Scalability** - Easy to add new docs/scripts without cluttering
-5. **Professional Structure** - Industry-standard organization
+- `docker-compose.yml`: local production-style stack with Postgres, backend, and nginx frontend.
+- `Dockerfile.frontend`: builds Vite app and serves it through nginx.
+- `Dockerfile.backend`: builds the Node/Express backend and Prisma client.
+- `nginx.conf`: SPA fallback plus `/api` and `/socket.io` proxying to the backend container.
+- `vite.config.js`: React/Tailwind build config plus local dev proxy for `/api` and `/socket.io`.
 
----
-
-## 📝 Notes
-
-- All markdown documentation is in `/docs/`
-- All utility scripts are in `/scripts/`
-- Configuration files remain in root (standard practice)
-- Source code structure unchanged (already well-organized)
-
----
-
-**Last Updated:** January 2025
-
+Last updated: April 30, 2026

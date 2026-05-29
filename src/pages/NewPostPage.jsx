@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { blogAPI } from '@/lib/api';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/hooks/useAuth';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -23,6 +23,7 @@ export function NewPostPage() {
     excerpt: '',
     content: '',
   });
+  const canCreatePost = user?.role === 'ADMIN';
 
   useEffect(() => {
     if (!isEditing || !slug) {
@@ -104,6 +105,24 @@ export function NewPostPage() {
     return (
       <div className="min-h-[calc(100vh-4rem)] pt-16 pb-16 flex items-center justify-center">
         <Loader2 className="size-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (!isEditing && !canCreatePost) {
+    return (
+      <div className="min-h-[calc(100vh-4rem)] pt-16 pb-16">
+        <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8">
+          <Button variant="ghost" size="sm" asChild className="gap-2 -ml-2 mb-6 text-muted-foreground hover:text-foreground">
+            <Link to="/blog">
+              <ArrowLeft className="size-4" />
+              Back to blog
+            </Link>
+          </Button>
+          <div className="rounded-xl border border-destructive/20 bg-destructive/10 px-4 py-4 text-sm text-destructive">
+            You do not have permission to create posts.
+          </div>
+        </div>
       </div>
     );
   }

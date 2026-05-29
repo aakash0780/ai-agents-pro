@@ -5,8 +5,22 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { authAPI } from '@/lib/api';
-import { Lock, Loader2, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { Lock, Loader2, AlertCircle, CheckCircle2, Eye, EyeOff } from 'lucide-react';
 import { toast } from 'sonner';
+
+function getPasswordStrength(password) {
+  const checks = [
+    password.length >= 8,
+    /[A-Z]/.test(password),
+    /[0-9]/.test(password),
+    /[^A-Za-z0-9]/.test(password),
+    password.length >= 12,
+  ];
+  const score = checks.filter(Boolean).length;
+  const labels = ['Very weak', 'Weak', 'Fair', 'Good', 'Strong', 'Very strong'];
+  const tones = ['bg-red-500', 'bg-red-500', 'bg-amber-500', 'bg-yellow-500', 'bg-lime-500', 'bg-emerald-500'];
+  return { score, label: labels[score], toneClass: tones[score] };
+}
 
 export function ResetPasswordPage() {
   const [searchParams] = useSearchParams();
@@ -14,6 +28,8 @@ export function ResetPasswordPage() {
   const token = searchParams.get('token') || '';
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(false);
@@ -21,6 +37,7 @@ export function ResetPasswordPage() {
   useEffect(() => {
     if (!token) setError('Missing reset token. Please use the link from your email.');
   }, [token]);
+  const passwordStrength = getPasswordStrength(newPassword);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -49,15 +66,19 @@ export function ResetPasswordPage() {
 
   if (!token) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-surface p-6">
-        <Card className="w-full max-w-md rounded-2xl shadow-xl">
+      <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#050507] p-6 pt-24 text-[#f2f2f2]">
+        <div className="pointer-events-none absolute inset-0" aria-hidden="true">
+          <span className="absolute left-[12%] top-28 h-px w-52 bg-gradient-to-r from-transparent via-[#00d992]/40 to-transparent" />
+          <span className="absolute right-[16%] top-32 h-44 w-44 rounded-full border border-[#00d992]/10 shadow-[0_0_70px_rgba(0,217,146,0.08)]" />
+        </div>
+        <Card className="relative w-full max-w-md rounded-lg border-[#3d3a39] bg-[#101010]/95 shadow-[0_24px_80px_rgba(0,0,0,0.45),rgba(92,88,85,0.2)_0_0_18px] backdrop-blur">
           <CardContent className="px-6 py-8">
-            <div className="bg-destructive/10 border border-destructive/20 text-destructive text-sm p-3 rounded-md flex items-center gap-2">
+            <div className="flex items-center gap-2 rounded-md border border-[#fb565b]/30 bg-[#fb565b]/10 p-3 text-sm text-[#ffb4b4]">
               <AlertCircle className="h-4 w-4 shrink-0" />
               <span>Missing reset token. Please use the link from your email or request a new one.</span>
             </div>
             <div className="text-center mt-4">
-              <Link to="/forgot-password" className="text-primary hover:underline font-medium">
+              <Link to="/forgot-password" className="font-medium text-[#00d992] hover:underline">
                 Request new reset link
               </Link>
             </div>
@@ -68,16 +89,20 @@ export function ResetPasswordPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-surface p-6">
-      <Card className="w-full max-w-md rounded-2xl shadow-xl">
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#050507] p-6 pt-24 text-[#f2f2f2]">
+      <div className="pointer-events-none absolute inset-0" aria-hidden="true">
+        <span className="absolute left-[12%] top-28 h-px w-52 bg-gradient-to-r from-transparent via-[#00d992]/40 to-transparent" />
+        <span className="absolute right-[16%] top-32 h-44 w-44 rounded-full border border-[#00d992]/10 shadow-[0_0_70px_rgba(0,217,146,0.08)]" />
+      </div>
+      <Card className="relative w-full max-w-md rounded-lg border-[#3d3a39] bg-[#101010]/95 shadow-[0_24px_80px_rgba(0,0,0,0.45),rgba(92,88,85,0.2)_0_0_18px] backdrop-blur">
         <CardHeader className="text-center py-6 space-y-2">
           <div className="flex justify-center">
-            <div className="w-14 h-14 bg-gradient-to-br from-primary to-purple-600 rounded-2xl flex items-center justify-center shadow-md">
-              <Lock className="h-7 w-7 text-white" />
+            <div className="flex h-14 w-14 items-center justify-center rounded-lg border border-[#00d992]/35 bg-[#0d1512] shadow-[0_0_24px_rgba(0,217,146,0.18)]">
+              <Lock className="h-7 w-7 text-[#00d992]" />
             </div>
           </div>
-          <CardTitle className="text-2xl font-extrabold">Set new password</CardTitle>
-          <CardDescription className="text-sm text-muted-foreground max-w-[28rem] mx-auto">
+          <CardTitle className="text-2xl font-semibold text-[#f2f2f2]">Set new password</CardTitle>
+          <CardDescription className="mx-auto max-w-[28rem] text-sm leading-6 text-[#8b949e]">
             Enter your new password below. Use at least 6 characters.
           </CardDescription>
         </CardHeader>
@@ -85,12 +110,12 @@ export function ResetPasswordPage() {
         <CardContent className="px-6 pb-8">
           {success ? (
             <div className="space-y-4">
-              <div className="bg-green-500/10 border border-green-500/20 text-green-700 dark:text-green-400 text-sm p-3 rounded-md flex items-center gap-2">
+              <div className="flex items-center gap-2 rounded-md border border-[#00d992]/25 bg-[#00d992]/10 p-3 text-sm text-[#bfffea]">
                 <CheckCircle2 className="h-4 w-4 shrink-0" />
                 <span>Password has been reset. Redirecting to sign in…</span>
               </div>
               <div className="text-center">
-                <Link to="/login" className="text-primary hover:underline font-medium">
+                <Link to="/login" className="font-medium text-[#00d992] hover:underline">
                   Go to sign in
                 </Link>
               </div>
@@ -98,48 +123,76 @@ export function ResetPasswordPage() {
           ) : (
             <form onSubmit={handleSubmit} className="space-y-4">
               {error && (
-                <div className="bg-destructive/10 border border-destructive/20 text-destructive text-sm p-3 rounded-md flex items-center gap-2">
+                <div className="flex items-center gap-2 rounded-md border border-[#fb565b]/30 bg-[#fb565b]/10 p-3 text-sm text-[#ffb4b4]">
                   <AlertCircle className="h-4 w-4 shrink-0" />
                   <span>{error}</span>
                 </div>
               )}
               <div className="space-y-2">
-                <Label htmlFor="newPassword">New password</Label>
+                <Label htmlFor="newPassword" className="text-[#b8b3b0]">New password</Label>
                 <div className="relative">
-                  <Lock className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
+                  <Lock className="absolute left-3 top-3 h-5 w-5 text-[#8b949e]" />
                   <Input
                     id="newPassword"
                     name="newPassword"
-                    type="password"
+                    type={showNewPassword ? 'text' : 'password'}
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
                     placeholder="••••••••"
-                    className="pl-10 py-3 rounded-lg"
+                    className="rounded-md border-[#3d3a39] bg-[#050507] py-3 pl-10 pr-12 text-[#f2f2f2] placeholder:text-[#8b949e] focus-visible:ring-[#00d992]"
                     required
                     minLength={6}
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowNewPassword((current) => !current)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[#8b949e] transition-colors hover:text-[#f2f2f2]"
+                    aria-label={showNewPassword ? 'Hide password' : 'Show password'}
+                  >
+                    {showNewPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                  </button>
                 </div>
+                {newPassword ? (
+                  <div className="space-y-1">
+                    <div className="h-1.5 w-full rounded-full bg-[#050507]">
+                      <div
+                        className={`h-1.5 rounded-full transition-all duration-200 ${passwordStrength.toneClass}`}
+                        style={{ width: `${(passwordStrength.score / 5) * 100}%` }}
+                        aria-hidden="true"
+                      />
+                    </div>
+                    <p className="text-xs text-[#8b949e]">Strength: {passwordStrength.label}</p>
+                  </div>
+                ) : null}
               </div>
               <div className="space-y-2">
-                <Label htmlFor="confirmPassword">Confirm password</Label>
+                <Label htmlFor="confirmPassword" className="text-[#b8b3b0]">Confirm password</Label>
                 <div className="relative">
-                  <Lock className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
+                  <Lock className="absolute left-3 top-3 h-5 w-5 text-[#8b949e]" />
                   <Input
                     id="confirmPassword"
                     name="confirmPassword"
-                    type="password"
+                    type={showConfirmPassword ? 'text' : 'password'}
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     placeholder="••••••••"
-                    className="pl-10 py-3 rounded-lg"
+                    className="rounded-md border-[#3d3a39] bg-[#050507] py-3 pl-10 pr-12 text-[#f2f2f2] placeholder:text-[#8b949e] focus-visible:ring-[#00d992]"
                     required
                     minLength={6}
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword((current) => !current)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[#8b949e] transition-colors hover:text-[#f2f2f2]"
+                    aria-label={showConfirmPassword ? 'Hide confirm password' : 'Show confirm password'}
+                  >
+                    {showConfirmPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                  </button>
                 </div>
               </div>
               <Button
                 type="submit"
-                className="w-full rounded-xl py-3 text-sm font-semibold bg-black text-white"
+                className="w-full rounded-md border border-[#00d992]/60 bg-[#00d992] py-3 text-sm font-semibold text-[#050507] hover:bg-[#2fd6a1]"
                 size="lg"
                 disabled={loading}
               >
@@ -152,8 +205,8 @@ export function ResetPasswordPage() {
                   'Reset password'
                 )}
               </Button>
-              <div className="text-center text-sm text-muted-foreground mt-4">
-                <Link to="/login" className="text-primary hover:underline font-medium">
+              <div className="mt-4 text-center text-sm text-[#8b949e]">
+                <Link to="/login" className="font-medium text-[#00d992] hover:underline">
                   Back to sign in
                 </Link>
               </div>

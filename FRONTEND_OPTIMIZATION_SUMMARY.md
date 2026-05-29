@@ -1,5 +1,7 @@
 # Frontend UI/UX Optimization Summary
 
+> Current status note (April 30, 2026): this is a historical optimization summary. The active frontend hierarchy and routes are documented in `PROJECT_STRUCTURE.md`, and the current setup/API proxy guidance is in `README.md` and `DOCKER_AND_CI.md`.
+
 ## 📋 Project Overview
 This document summarizes all frontend optimizations implemented to improve user experience, accessibility, and responsive design across the ai-agents-website.
 

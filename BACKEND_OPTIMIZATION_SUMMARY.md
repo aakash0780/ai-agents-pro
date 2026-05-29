@@ -1,5 +1,7 @@
 # Backend Infrastructure & Optimization Summary
 
+> Current status note (April 30, 2026): this is a historical infrastructure summary and may reference services that are not present in the current Docker Compose stack. The active backend hierarchy is in `PROJECT_STRUCTURE.md`, and the current Docker/API proxy setup is in `DOCKER_AND_CI.md`.
+
 ## 📋 Project Overview
 This document summarizes the comprehensive backend infrastructure built to power the ai-agents-website, providing production-ready microservices architecture with Node.js, Python FastAPI, PostgreSQL, Redis, Docker, and Kubernetes support.
 
