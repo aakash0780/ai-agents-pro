@@ -1,0 +1,140 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: [main, develop]
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: pnpm lint
+
+  build-frontend:
+    name: Build frontend
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build frontend
+        run: pnpm build
+        env:
+          VITE_API_URL: /api
+          VITE_UMAMI_SCRIPT_URL: https://analytics.example.com/script.js
+          VITE_UMAMI_WEBSITE_ID: ci-placeholder-website-id
+          VITE_GA4_MEASUREMENT_ID: G-XXXXXXXXXX
+          VITE_GOOGLE_SITE_VERIFICATION: ci-placeholder-search-console-token
+          VITE_CLARITY_PROJECT_ID: ci-placeholder-clarity-id
+          VITE_HOTJAR_SITE_ID: "123456"
+          VITE_HOTJAR_VERSION: "6"
+          VITE_META_PIXEL_ID: ci-placeholder-meta-pixel-id
+
+  docker-compose-smoke:
+    name: Docker Compose smoke test
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    env:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: ai_agents_db
+      JWT_SECRET: ci-secret-not-for-production
+      FRONTEND_URL: http://localhost
+      VITE_API_URL: /api
+      VITE_SOCKET_URL: ""
+      VITE_UMAMI_SCRIPT_URL: https://analytics.example.com/script.js
+      VITE_UMAMI_WEBSITE_ID: ci-placeholder-website-id
+      VITE_GA4_MEASUREMENT_ID: G-XXXXXXXXXX
+      VITE_GOOGLE_SITE_VERIFICATION: ci-placeholder-search-console-token
+      VITE_CLARITY_PROJECT_ID: ci-placeholder-clarity-id
+      VITE_HOTJAR_SITE_ID: "123456"
+      VITE_HOTJAR_VERSION: "6"
+      VITE_META_PIXEL_ID: ci-placeholder-meta-pixel-id
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Create .env for compose
+        run: |
+          echo 'DATABASE_URL=postgresql://postgres:postgres@postgres:5432/ai_agents_db' >> .env
+          echo 'JWT_SECRET=ci-secret-not-for-production' >> .env
+          echo 'PORT=3001' >> .env
+          echo 'FRONTEND_URL=http://localhost' >> .env
+          echo 'VITE_API_URL=/api' >> .env
+          echo 'VITE_SOCKET_URL=' >> .env
+          echo 'VITE_UMAMI_SCRIPT_URL=https://analytics.example.com/script.js' >> .env
+          echo 'VITE_UMAMI_WEBSITE_ID=ci-placeholder-website-id' >> .env
+          echo 'VITE_GA4_MEASUREMENT_ID=G-XXXXXXXXXX' >> .env
+          echo 'VITE_GOOGLE_SITE_VERIFICATION=ci-placeholder-search-console-token' >> .env
+          echo 'VITE_CLARITY_PROJECT_ID=ci-placeholder-clarity-id' >> .env
+          echo 'VITE_HOTJAR_SITE_ID=123456' >> .env
+          echo 'VITE_HOTJAR_VERSION=6' >> .env
+          echo 'VITE_META_PIXEL_ID=ci-placeholder-meta-pixel-id' >> .env
+
+      - name: Build and run with Docker Compose
+        run: |
+          docker compose up -d --build --force-recreate
+          sleep 30
+
+      - name: Wait for backend health
+        run: |
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost/api/health; then break; fi
+            sleep 2
+          done
+          curl -sf http://localhost/api/health
+
+      - name: Check frontend responds
+        run: curl -sf -o /dev/null -w "%{http_code}" http://localhost:80 | grep -q 200
+
+      - name: Show logs on failure
+        if: failure()
+        run: docker compose logs
+
+      - name: Tear down
+        if: always()
+        run: docker compose down -v

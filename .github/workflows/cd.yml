@@ -1,0 +1,123 @@
+name: CD
+
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+    branches: [main, develop]
+  workflow_dispatch:
+
+concurrency:
+  group: cd-${{ github.event.workflow_run.head_branch || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  push-images:
+    name: Build and push Docker images
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      packages: write
+    env:
+      REGISTRY: ghcr.io
+      BACKEND_IMAGE: ${{ github.repository }}/backend
+      FRONTEND_IMAGE: ${{ github.repository }}/frontend
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Determine release channel
+        id: channel
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            BRANCH="${GITHUB_REF_NAME}"
+          else
+            BRANCH="${{ github.event.workflow_run.head_branch }}"
+          fi
+
+          echo "branch=${BRANCH}" >> "$GITHUB_OUTPUT"
+          if [ "$BRANCH" = "main" ]; then
+            echo "is_main=true" >> "$GITHUB_OUTPUT"
+            echo "is_develop=false" >> "$GITHUB_OUTPUT"
+          elif [ "$BRANCH" = "develop" ]; then
+            echo "is_main=false" >> "$GITHUB_OUTPUT"
+            echo "is_develop=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "is_main=false" >> "$GITHUB_OUTPUT"
+            echo "is_develop=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Extract metadata (backend)
+        id: meta-backend
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.BACKEND_IMAGE }}
+          tags: |
+            type=sha,prefix=
+            type=raw,value=latest,enable=${{ steps.channel.outputs.is_main == 'true' }}
+            type=raw,value=develop-latest,enable=${{ steps.channel.outputs.is_develop == 'true' }}
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.event.workflow_run.head_sha || github.sha }}
+
+      - name: Extract metadata (frontend)
+        id: meta-frontend
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.FRONTEND_IMAGE }}
+          tags: |
+            type=sha,prefix=
+            type=raw,value=latest,enable=${{ steps.channel.outputs.is_main == 'true' }}
+            type=raw,value=develop-latest,enable=${{ steps.channel.outputs.is_develop == 'true' }}
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.event.workflow_run.head_sha || github.sha }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push backend
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile.backend
+          push: true
+          tags: ${{ steps.meta-backend.outputs.tags }}
+          labels: ${{ steps.meta-backend.outputs.labels }}
+          cache-from: type=gha,scope=backend
+          cache-to: type=gha,mode=max,scope=backend
+
+      - name: Build and push frontend
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile.frontend
+          push: true
+          build-args: |
+            VITE_API_URL=/api
+            VITE_SOCKET_URL=
+            VITE_UMAMI_SCRIPT_URL=${{ vars.VITE_UMAMI_SCRIPT_URL }}
+            VITE_UMAMI_WEBSITE_ID=${{ vars.VITE_UMAMI_WEBSITE_ID }}
+            VITE_GA4_MEASUREMENT_ID=${{ vars.VITE_GA4_MEASUREMENT_ID }}
+            VITE_GOOGLE_SITE_VERIFICATION=${{ vars.VITE_GOOGLE_SITE_VERIFICATION }}
+            VITE_CLARITY_PROJECT_ID=${{ vars.VITE_CLARITY_PROJECT_ID }}
+            VITE_HOTJAR_SITE_ID=${{ vars.VITE_HOTJAR_SITE_ID }}
+            VITE_HOTJAR_VERSION=${{ vars.VITE_HOTJAR_VERSION }}
+            VITE_META_PIXEL_ID=${{ vars.VITE_META_PIXEL_ID }}
+            APP_BUILD_SHA=${{ github.event.workflow_run.head_sha || github.sha }}
+          tags: ${{ steps.meta-frontend.outputs.tags }}
+          labels: ${{ steps.meta-frontend.outputs.labels }}
+          cache-from: type=gha,scope=frontend
+          cache-to: type=gha,mode=max,scope=frontend

@@ -25,9 +25,6 @@ token.json
 # Python virtualenv
 myenv/
 
-# CI workflows (kept local only)
-.github/workflows/
-
 # Logs
 *.log
 npm-debug.log*
